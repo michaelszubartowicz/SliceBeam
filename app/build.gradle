@@ -1,0 +1,94 @@
+plugins {
+    id 'com.android.application'
+}
+
+def commit = getGitCommitHash(file('.'))
+
+android {
+    namespace 'ru.ytkab0bp.slicebeam'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "ru.ytkab0bp.slicebeam"
+        minSdk 21
+        targetSdk 34
+        versionCode 2
+        versionName "0.1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_STL=c++_shared', '-DANDROID_PLATFORM=21',
+                        '-DCMAKE_BUILD_TYPE=Release' // Disabling this results in drastically degradation of slicing times on debug builds
+            }
+        }
+    }
+    sourceSets {
+        main {
+            jniLibs.srcDirs += file('src/main/occt/jniLibs')
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            buildConfigField "boolean", "IS_GOOGLE_PLAY", "true"
+            buildConfigField "String", "COMMIT", "\"" + commit + "\""
+        }
+        debug {
+            buildConfigField "boolean", "IS_GOOGLE_PLAY", "false"
+            buildConfigField "String", "COMMIT", "\"" + commit + "\""
+            ndk {
+                debugSymbolLevel 'NONE'
+                //noinspection ChromeOsAbiSupport
+                abiFilters "arm64-v8a"
+            }
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    externalNativeBuild {
+        cmake {
+            path file('CMakeLists.txt')
+        }
+        ndkVersion "23.1.7779620"
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            outputFileName = "SliceBeam_" + commit + ".apk"
+        }
+    }
+}
+
+static String getGitCommitHash(File dir) {
+    try {
+        return Runtime.getRuntime().exec("git rev-parse HEAD", null, dir).inputStream.readLines().get(0).substring(0, 10)
+    } catch (Exception e){
+        println("Unable to get git commit hash:")
+        e.printStackTrace()
+        return "non-git build"
+    }
+}
+
+dependencies {
+    implementation project(":eventbus")
+    implementation project(":eventbus_api")
+    annotationProcessor project(":eventbus_processor")
+
+    implementation 'com.github.mrudultora:Colorpicker:1.2.0'
+    implementation 'com.github.bumptech.glide:glide:4.16.0'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'com.loopj.android:android-async-http:1.4.11'
+    implementation 'androidx.activity:activity:1.9.1'
+}

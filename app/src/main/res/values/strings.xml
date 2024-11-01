@@ -1,0 +1,142 @@
+<resources>
+    <string name="AppName" translatable="false">Slice Beam</string>
+    <string name="SlotBed">Preview</string>
+    <string name="SlotPrintConfig">Print</string>
+    <string name="SlotPrintConfigTooltip">Print profile</string>
+    <string name="SlotFilamentConfig">Filament</string>
+    <string name="SlotFilamentConfigTooltip">Filament profile</string>
+    <string name="SlotPrinterConfig">Printer</string>
+    <string name="SlotPrinterConfigTooltip">Printer profile</string>
+    <string name="SlotAppSettings">App</string>
+    <string name="SlotAppSettingsTooltip">App settings</string>
+    <string name="MenuFile">File</string>
+    <string name="MenuFileOpen">Open model</string>
+    <string name="MenuFileOpenFileLoaded">File loaded.</string>
+    <string name="MenuFileOpenFileFailed">Failed to open model</string>
+    <string name="MenuFileOpenFileFailedNullName">Failed to resolve file name.</string>
+    <string name="MenuFileDelete">Remove model</string>
+    <string name="MenuFileCalibrations">Calibrat.</string>
+    <string name="MenuFileCalibrationsLA">K3D Linear Advance</string>
+    <string name="MenuFileCalibrationsLADescription">Linear/Pressure Advance Calibration</string>
+    <string name="MenuFileCalibrationsRetract">K3D Retractions</string>
+    <string name="MenuFileCalibrationsRetractDescription">Retraction distance and speed calibration</string>
+    <string name="MenuFileImportProfiles">Import profiles</string>
+    <string name="MenuFileImportProfilesFailed">Import failed</string>
+    <string name="MenuFileImportProfilesFailedNotIni">Not an .ini file</string>
+    <string name="MenuFileExportProfiles">Export profiles</string>
+    <string name="MenuFileExportProfilesPrints">Print configs</string>
+    <string name="MenuFileExportProfilesFilaments">Filaments</string>
+    <string name="MenuFileExportProfilesPrinters">Printers</string>
+    <string name="MenuFileExportProfilesNoProfiles">No profiles selected.</string>
+    <string name="MenuCamera">Camera</string>
+    <string name="MenuCameraIsometric">Isom. view</string>
+    <string name="MenuCameraTop">Top view</string>
+    <string name="MenuCameraBottom">Bottom view</string>
+    <string name="MenuCameraFront">Front view</string>
+    <string name="MenuCameraBack">Back view</string>
+    <string name="MenuCameraLeft">Left view</string>
+    <string name="MenuCameraRight">Right view</string>
+    <string name="MenuCameraOrtho">Orth. project.</string>
+    <string name="MenuCameraEnableRotation">Allow rotation</string>
+    <string name="MenuOrientation">Orientation</string>
+    <string name="MenuOrientationArrange">Arrange models</string>
+    <string name="MenuOrientationArrangeFinished">Models arranged.</string>
+    <string name="MenuOrientationPosition">Position</string>
+    <string name="MenuOrientationPositionX">X</string>
+    <string name="MenuOrientationPositionY">Y</string>
+    <string name="MenuOrientationPositionZ">Z</string>
+    <string name="MenuOrientationPositionXValue">X = %.2f</string>
+    <string name="MenuOrientationPositionYValue">Y = %.2f</string>
+    <string name="MenuOrientationPositionZValue">Z = %.2f</string>
+    <string name="MenuOrientationRotation">Rotation</string>
+    <string name="MenuOrientationRotationX">X</string>
+    <string name="MenuOrientationRotationY">Y</string>
+    <string name="MenuOrientationRotationZ">Z</string>
+    <string name="MenuOrientationRotationXValue">X = %.2f°</string>
+    <string name="MenuOrientationRotationYValue">Y = %.2f°</string>
+    <string name="MenuOrientationRotationZValue">Z = %.2f°</string>
+    <string name="MenuOrientationRotationApply">Apply</string>
+    <string name="MenuOrientationPositionBack">Back</string>
+    <string name="MenuTransform">Transform</string>
+    <string name="MenuTransformScale">Scale</string>
+    <string name="MenuTransformScaleLink">Save aspect ratio</string>
+    <string name="MenuTransformScaleXValue">X = %.2f %%</string>
+    <string name="MenuTransformScaleYValue">Y = %.2f %%</string>
+    <string name="MenuTransformScaleZValue">Z = %.2f %%</string>
+    <string name="MenuTransformMirror">Mirror</string>
+    <string name="MenuTransformMirrorX">Mirror X</string>
+    <string name="MenuTransformMirrorY">Mirror Y</string>
+    <string name="MenuTransformMirrorZ">Mirror Z</string>
+    <string name="MenuModifiers">Modifiers</string>
+    <string name="MenuSlice">Slice</string>
+<!--    <string name="MenuSliceInfo">Print\ninfo</string>-->
+    <string name="MenuSliceInfo">Layers</string>
+    <string name="MenuSliceInfoLayers">Layers %d - %d</string>
+    <string name="MenuSliceExportToFile">Export to file</string>
+    <string name="MenuSliceShare">Share</string>
+    <string name="MenuSliceSendToPrinter">Send to printer</string>
+    <string name="MenuSliceSendToPrinterAndPrint">Send and print</string>
+    <string name="MenuSliceSendToPrinterStarted">Upload started…</string>
+    <string name="MenuSliceSendToPrinterOK">File sent to printer.</string>
+    <string name="MenuSliceSendToPrinterPrintStarted">File sent, starting print…</string>
+    <string name="MenuSliceSendToPrinterFailed">Failed to send file</string>
+    <string name="SliceFailed">Slice failed!</string>
+    <string name="SliceFailedNoModels">No visible objects</string>
+    <string name="SliceInProgress">Slicing…</string>
+    <string name="IntroStart">Start</string>
+    <string name="IntroLetStartWithColor">Let\'s start with your favorite color.</string>
+    <string name="IntroFailedToLoadRepos">Failed to load repositories from network!</string>
+    <string name="IntroSelectRepos">Select repositories to fetch profiles.</string>
+    <string name="IntroCustomProfile">Use custom profile</string>
+    <string name="IntroCustomProfileHeader">Custom</string>
+    <string name="IntroCustomProfileName">Custom profile</string>
+    <string name="IntroCustomProfileFilamentName">Generic PLA</string>
+    <string name="IntroNoRepos">No repositories configured</string>
+    <string name="IntroNoReposDescription">You must configure repositories or use a custom profile.</string>
+    <string name="IntroNoProfiles">No profiles configured</string>
+    <string name="IntroNoProfilesDescription">You must select at least one profile.</string>
+    <string name="IntroBoostyTitle">Is supported by these awesome people on Boosty:</string>
+    <string name="IntroBoostySupport">Subscribe at Boosty</string>
+    <string name="IntroNext">Next</string>
+    <string name="IntroConfigured">All seems to be configured.\nJust tap finish!</string>
+    <string name="IntroFinish">Finish</string>
+    <string name="IntroEarlyAccess">Early access</string>
+    <string name="IntroEarlyAccessMessage">You are using an Early Access of Slice Beam.\nPlease note that some features may be unavailable, buggy or work not as expected.\nPlease subscribe to developer\'s Telegram for app\'s news.</string>
+    <string name="SettingsResetToDefault">Reset to defaults</string>
+    <string name="SettingsResetToDefaultTitle">Are you sure?</string>
+    <string name="SettingsResetToDefaultDescription">This action can not be undone.</string>
+    <string name="SettingsResetProfileTitle">Reset changes?</string>
+    <string name="SettingsResetProfileDescription">This action can not be undone.</string>
+    <string name="SettingsSave">Save</string>
+    <string name="SettingsSaveTitle">Save profile?</string>
+    <string name="SettingsBoosty">Developer\'s Boosty</string>
+    <string name="SettingsTelegram">Developer\'s Telegram</string>
+    <string name="SettingsK3D">K3D Chat</string>
+    <string name="SettingsInterface">Interface</string>
+    <string name="SettingsInterfaceTheme">Theme</string>
+    <string name="SettingsInterfaceThemeSystem">System</string>
+    <string name="SettingsInterfaceThemeLight">Light</string>
+    <string name="SettingsInterfaceThemeDark">Dark</string>
+    <string name="SettingsInterfaceColor">Primary color</string>
+    <string name="SettingsInterfaceColorReset">Reset to default</string>
+    <string name="SettingsInterfaceResolutionScale">3D Resolution scale</string>
+    <string name="SettingsInterfaceResolutionScaleDescription">May improve performance by lowering resolution</string>
+    <string name="SettingsAbout">About app</string>
+    <string name="SettingsAboutVersion">v%s\nBased on PrusaSlicer\n\nCreated by YTKAB0BP</string>
+    <string name="SettingsProfileCopy">%s - Copy</string>
+    <string name="SettingsCloneProfile">Clone current</string>
+    <string name="SettingsDeleteProfile">Delete current</string>
+    <string name="Changelog">Changelog</string>
+    <string name="ChangelogBoosty" translatable="false">Boosty</string>
+    <string name="ChangelogBoostyDescription">The release of this update was supported by:</string>
+    <string name="ChangelogNext">Next</string>
+    <string name="ChangelogOK">OK</string>
+    <string name="OrcaConversionPleaseWait">Converting profiles, please wait…</string>
+    <string name="OrcaConversionNotAConfigBundle">Not a config bundle</string>
+    <string name="AppCrashed">Something went wrong</string>
+    <string name="AppCrashedDesc">Android version: %s\nDevice: %s\nLogs:\n%s</string>
+    <string name="AppCrashedShare">Share</string>
+    <string name="AppCrashedRestart">Try to start app again</string>
+    <string name="BedConfigurationError">Bed config error</string>
+    <string name="BedConfigurationErrorDesc">You should fix your bed configuration before usage.</string>
+</resources>
