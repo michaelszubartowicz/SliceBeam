@@ -12,6 +12,12 @@ It is based on PrusaSlicer's core and well optimized for Android touchscreen int
 # Quick Start
 Just download APK from [Releases tab](https://github.com/utkabobr/SliceBeam/releases/latest) and follow setup instructions. Google Play builds will be available later.
 
+# Where to get printer profiles?
+
+It is recommended to use PrusaSlicer's profiles, Slice Beam profiles are using Prusa's format. You can import PrusaSlicer's profiles and vice versa.
+
+But, there is an experimental OrcaSlicer profile support, please open Issue tickets with your .orca_printer files, so I can check what wents wrong on your specific case.
+
 # Some screenshots
 ![Screenshot 1](/.github/img/screen1.png) ![Screenshot 2](/.github/img/screen2.png) ![Screenshot 3](/.github/img/screen3.png) ![Screenshot 4](/.github/img/screen4.png)
 
