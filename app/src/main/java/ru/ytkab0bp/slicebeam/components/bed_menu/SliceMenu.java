@@ -71,7 +71,7 @@ public class SliceMenu extends ListBedMenu {
     protected List<SimpleRecyclerItem> onCreateItems(boolean portrait) {
         lastUid = SliceBeam.CONFIG_UID;
         List<SimpleRecyclerItem> items = new ArrayList<>(Arrays.asList(
-                new BedMenuItem(R.string.MenuSliceInfo, R.drawable.square_stack_up_outline_28).onClick(v -> fragment.showUnfoldMenu(new PrintInfoMenu(), v)),
+                new BedMenuItem(R.string.MenuSliceInfo, R.drawable.square_stack_up_outline_28).onClick(v -> fragment.showUnfoldMenu(new LayersMenu(), v)),
                 new BedMenuItem(R.string.MenuSliceExportToFile, R.drawable.folder_simple_arrow_right_outline_28).onClick(v -> {
                     if (fragment.getContext() instanceof Activity) {
                         Activity act = (Activity) fragment.getContext();
@@ -176,7 +176,7 @@ public class SliceMenu extends ListBedMenu {
         });
     }
 
-    private final static class PrintInfoMenu extends UnfoldMenu {
+    private final static class LayersMenu extends UnfoldMenu {
         private PositionScrollView fromTrack, toTrack;
         private TextView title;
 

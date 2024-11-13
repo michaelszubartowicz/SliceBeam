@@ -27,6 +27,7 @@ public abstract class UnfoldMenu {
     protected BedFragment fragment;
 
     private boolean isVisible;
+    private boolean isDismissing;
     private SpringAnimation spring;
     private DynamicAnimation.OnAnimationUpdateListener updateListener;
     private FrameLayout containerLayout;
@@ -122,12 +123,20 @@ public abstract class UnfoldMenu {
             }
 
             @Override
+            protected void onAttachedToWindow() {
+                super.onAttachedToWindow();
+
+                if (isVisible) {
+                    onCreate();
+                }
+            }
+
+            @Override
             protected void onDetachedFromWindow() {
                 super.onDetachedFromWindow();
 
                 if (isVisible) {
                     onDestroy();
-                    isVisible = false;
                 }
             }
         };
@@ -138,7 +147,6 @@ public abstract class UnfoldMenu {
         rootView.setTranslationX(fromTranslationX);
         rootView.setTranslationY(fromTranslationY);
 
-        onCreate();
         dimmView = new View(ctx);
         dimmView.setBackgroundColor(0x40000000);
         dimmView.setTranslationX(toTranslationX);
@@ -207,6 +215,10 @@ public abstract class UnfoldMenu {
         updateListener.onAnimationUpdate(spring, 1f, 0f);
     }
 
+    public boolean isAttached() {
+        return rootView.getParent() != null && !isDismissing;
+    }
+
     public void dismiss() {
         dismiss(false);
     }
@@ -215,7 +227,9 @@ public abstract class UnfoldMenu {
         if (!isVisible) return;
         this.isVisible = false;
 
+        isDismissing = true;
         onDestroy();
+        isDismissing = false;
 
         if (alphaOnly) {
             ValueAnimator anim = ValueAnimator.ofFloat(0, 1).setDuration(150);
