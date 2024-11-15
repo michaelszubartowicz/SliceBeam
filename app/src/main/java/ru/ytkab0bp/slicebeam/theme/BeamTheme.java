@@ -36,7 +36,7 @@ public class BeamTheme {
         colors.put(R.attr.gcodeViewerTopSolidInfill, 0xFFF04040);
         colors.put(R.attr.gcodeViewerIroning, 0xFFFF8C69);
         colors.put(R.attr.gcodeViewerBridgeInfill, 0xFF4D80BA);
-        colors.put(R.attr.gcodeViewerGapFill, 0xFF00876E);
+        colors.put(R.attr.gcodeViewerGapFill, 0xFFFFFFFF);
         colors.put(R.attr.gcodeViewerSkirt, 0xFF00876E);
         colors.put(R.attr.gcodeViewerSupportMaterial, 0xFF00FF00);
         colors.put(R.attr.gcodeViewerSupportMaterialInterface, 0xFF008000);
