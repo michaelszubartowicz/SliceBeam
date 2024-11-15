@@ -4,12 +4,54 @@ import static ru.ytkab0bp.slicebeam.utils.DebugUtils.assertTrue;
 
 import android.graphics.Color;
 
+import androidx.annotation.IntDef;
 import androidx.core.util.Pair;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 import ru.ytkab0bp.slicebeam.R;
 import ru.ytkab0bp.slicebeam.theme.ThemesRepo;
 
 public class GCodeViewer {
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(value = {
+            EXTRUSION_ROLE_NONE,
+            EXTRUSION_ROLE_PERIMETER,
+            EXTRUSION_ROLE_EXTERNAL_PERIMETER,
+            EXTRUSION_ROLE_OVERHANG_PERIMETER,
+            EXTRUSION_ROLE_INTERNAL_INFILL,
+            EXTRUSION_ROLE_SOLID_INFILL,
+            EXTRUSION_ROLE_TOP_SOLID_INFILL,
+            EXTRUSION_ROLE_IRONING,
+            EXTRUSION_ROLE_BRIDGE_INFILL,
+            EXTRUSION_ROLE_GAP_FILL,
+            EXTRUSION_ROLE_SKIRT,
+            EXTRUSION_ROLE_SUPPORT_MATERIAL,
+            EXTRUSION_ROLE_SUPPORT_MATERIAL_INTERFACE,
+            EXTRUSION_ROLE_WIPE_TOWER,
+            EXTRUSION_ROLE_CUSTOM
+    })
+    public @interface ExtrusionRole{}
+
+    public final static int EXTRUSION_ROLE_NONE = 0,
+            EXTRUSION_ROLE_PERIMETER = 1,
+            EXTRUSION_ROLE_EXTERNAL_PERIMETER = 2,
+            EXTRUSION_ROLE_OVERHANG_PERIMETER = 3,
+            EXTRUSION_ROLE_INTERNAL_INFILL = 4,
+            EXTRUSION_ROLE_SOLID_INFILL = 5,
+            EXTRUSION_ROLE_TOP_SOLID_INFILL = 6,
+            EXTRUSION_ROLE_IRONING = 7,
+            EXTRUSION_ROLE_BRIDGE_INFILL = 8,
+            EXTRUSION_ROLE_GAP_FILL = 9,
+            EXTRUSION_ROLE_SKIRT = 10,
+            EXTRUSION_ROLE_SUPPORT_MATERIAL = 11,
+            EXTRUSION_ROLE_SUPPORT_MATERIAL_INTERFACE = 12,
+            EXTRUSION_ROLE_WIPE_TOWER = 13,
+            EXTRUSION_ROLE_CUSTOM = 14,
+
+            EXTRUSION_ROLES_COUNT = 15;
+
     private ThreadLocal<float[]> viewMatrixBuffer = new ThreadLocal<float[]>() {
         @Override
         protected float[] initialValue() {
@@ -52,6 +94,22 @@ public class GCodeViewer {
 
     public long getLayersCount() {
         return Native.vgcode_get_layers_count(pointer);
+    }
+
+    public float getEstimatedTime() {
+        return Native.vgcode_get_estimated_time(pointer);
+    }
+
+    public float getEstimatedTime(@ExtrusionRole int extrusionRole) {
+        return Native.vgcode_get_estimated_time_role(pointer, extrusionRole);
+    }
+
+    public boolean isExtrusionRoleVisible(@ExtrusionRole int extrusionRole) {
+        return Native.vgcode_is_extrusion_role_visible(pointer, extrusionRole);
+    }
+
+    public void toggleExtrusionRoleVisible(@ExtrusionRole int extrusionRole) {
+        Native.vgcode_toggle_extrusion_role_visibility(pointer, extrusionRole);
     }
 
     public void render(double[] viewMatrix, double[] projectionMatrix) {

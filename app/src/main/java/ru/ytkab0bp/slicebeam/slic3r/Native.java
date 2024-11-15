@@ -84,6 +84,10 @@ class Native {
     static native void vgcode_render(long ptr, float[] viewMatrix, float[] projectionMatrix);
     static native void vgcode_set_layers_view_range(long ptr, long min, long max);
     static native long[] vgcode_get_layers_view_range(long ptr);
+    static native float vgcode_get_estimated_time(long ptr);
+    static native float vgcode_get_estimated_time_role(long ptr, int role);
+    static native boolean vgcode_is_extrusion_role_visible(long ptr, int role);
+    static native void vgcode_toggle_extrusion_role_visibility(long ptr, int role);
     static native void vgcode_reset(long ptr);
     static native void vgcode_release(long ptr);
 

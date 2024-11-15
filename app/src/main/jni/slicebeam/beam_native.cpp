@@ -1139,4 +1139,77 @@ extern "C" {
         ref->viewer.shutdown();
         delete ref;
     }
+
+    JNIEXPORT jfloat JNICALL Java_ru_ytkab0bp_slicebeam_slic3r_Native_vgcode_1get_1estimated_1time(JNIEnv* env, jclass, jlong ptr) {
+        GCodeViewerRef* ref = (GCodeViewerRef*) (intptr_t) ptr;
+        return ref->viewer.get_estimated_time();
+    }
+
+    libvgcode::EGCodeExtrusionRole mapRole(int index) {
+        libvgcode::EGCodeExtrusionRole crole;
+        switch (index) {
+            default:
+            case 0:
+                crole = libvgcode::EGCodeExtrusionRole::None;
+                break;
+            case 1:
+                crole = libvgcode::EGCodeExtrusionRole::Perimeter;
+                break;
+            case 2:
+                crole = libvgcode::EGCodeExtrusionRole::ExternalPerimeter;
+                break;
+            case 3:
+                crole = libvgcode::EGCodeExtrusionRole::OverhangPerimeter;
+                break;
+            case 4:
+                crole = libvgcode::EGCodeExtrusionRole::InternalInfill;
+                break;
+            case 5:
+                crole = libvgcode::EGCodeExtrusionRole::SolidInfill;
+                break;
+            case 6:
+                crole = libvgcode::EGCodeExtrusionRole::TopSolidInfill;
+                break;
+            case 7:
+                crole = libvgcode::EGCodeExtrusionRole::Ironing;
+                break;
+            case 8:
+                crole = libvgcode::EGCodeExtrusionRole::BridgeInfill;
+                break;
+            case 9:
+                crole = libvgcode::EGCodeExtrusionRole::GapFill;
+                break;
+            case 10:
+                crole = libvgcode::EGCodeExtrusionRole::Skirt;
+                break;
+            case 11:
+                crole = libvgcode::EGCodeExtrusionRole::SupportMaterial;
+                break;
+            case 12:
+                crole = libvgcode::EGCodeExtrusionRole::SupportMaterialInterface;
+                break;
+            case 13:
+                crole = libvgcode::EGCodeExtrusionRole::WipeTower;
+                break;
+            case 14:
+                crole = libvgcode::EGCodeExtrusionRole::Custom;
+                break;
+        }
+        return crole;
+    }
+
+    JNIEXPORT jfloat JNICALL Java_ru_ytkab0bp_slicebeam_slic3r_Native_vgcode_1get_1estimated_1time_1role(JNIEnv* env, jclass, jlong ptr, jint role) {
+        GCodeViewerRef* ref = (GCodeViewerRef*) (intptr_t) ptr;
+        return ref->viewer.get_extrusion_role_estimated_time(mapRole(role));
+    }
+
+    JNIEXPORT jboolean JNICALL Java_ru_ytkab0bp_slicebeam_slic3r_Native_vgcode_1is_1extrusion_1role_1visible(JNIEnv* env, jclass, jlong ptr, jint role) {
+        GCodeViewerRef* ref = (GCodeViewerRef*) (intptr_t) ptr;
+        return ref->viewer.is_extrusion_role_visible(mapRole(role));
+    }
+
+    JNIEXPORT void JNICALL Java_ru_ytkab0bp_slicebeam_slic3r_Native_vgcode_1toggle_1extrusion_1role_1visibility(JNIEnv* env, jclass, jlong ptr, jint role) {
+        GCodeViewerRef* ref = (GCodeViewerRef*) (intptr_t) ptr;
+        ref->viewer.toggle_extrusion_role_visibility(mapRole(role));
+    }
 }

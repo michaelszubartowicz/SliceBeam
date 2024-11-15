@@ -69,8 +69,11 @@
     <string name="MenuTransformMirrorZ">Mirror Z</string>
     <string name="MenuModifiers">Modifiers</string>
     <string name="MenuSlice">Slice</string>
-<!--    <string name="MenuSliceInfo">Print\ninfo</string>-->
-    <string name="MenuSliceInfo">Layers</string>
+    <string name="MenuSliceInfo">Print\ninfo</string>
+    <string name="MenuSliceInfoSecond">s.</string>
+    <string name="MenuSliceInfoMinute">min.</string>
+    <string name="MenuSliceInfoHour">h.</string>
+    <string name="MenuSliceLayers">Layers</string>
     <string name="MenuSliceInfoLayers">Layers %d - %d</string>
     <string name="MenuSliceExportToFile">Export to file</string>
     <string name="MenuSliceShare">Share</string>

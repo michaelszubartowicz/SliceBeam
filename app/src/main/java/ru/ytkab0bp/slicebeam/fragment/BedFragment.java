@@ -472,6 +472,11 @@ public class BedFragment extends Fragment {
         super.onApplyTheme();
 
         menuView.setBackgroundColor(ThemesRepo.getColor(android.R.attr.windowBackground));
+        for (int i = 0; i < MenuCategory.values().length; i++) {
+            if (i != currentMenuSlot) {
+                ThemesRepo.invalidateView(menuMap.get(i).getView());
+            }
+        }
     }
 
     private void constructMenuView(Context ctx, boolean portrait) {

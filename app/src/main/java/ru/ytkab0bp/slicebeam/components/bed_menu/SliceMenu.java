@@ -5,11 +5,13 @@ import static ru.ytkab0bp.slicebeam.utils.DebugUtils.assertTrue;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.net.Uri;
 import android.os.Build;
 import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
@@ -22,6 +24,7 @@ import androidx.annotation.NonNull;
 import androidx.core.content.FileProvider;
 import androidx.core.util.Pair;
 
+import com.google.android.material.checkbox.MaterialCheckBox;
 import com.loopj.android.http.AsyncHttpClient;
 import com.loopj.android.http.AsyncHttpResponseHandler;
 import com.loopj.android.http.RequestParams;
@@ -51,10 +54,13 @@ import ru.ytkab0bp.slicebeam.events.NeedSnackbarEvent;
 import ru.ytkab0bp.slicebeam.fragment.BedFragment;
 import ru.ytkab0bp.slicebeam.recycler.SimpleRecyclerItem;
 import ru.ytkab0bp.slicebeam.slic3r.GCodeViewer;
+import ru.ytkab0bp.slicebeam.slic3r.Slic3rLocalization;
+import ru.ytkab0bp.slicebeam.theme.IThemeView;
 import ru.ytkab0bp.slicebeam.theme.ThemesRepo;
 import ru.ytkab0bp.slicebeam.utils.ViewUtils;
 import ru.ytkab0bp.slicebeam.view.DividerView;
 import ru.ytkab0bp.slicebeam.view.PositionScrollView;
+import ru.ytkab0bp.slicebeam.view.SegmentsView;
 
 public class SliceMenu extends ListBedMenu {
     private AsyncHttpClient client = new AsyncHttpClient();
@@ -71,7 +77,8 @@ public class SliceMenu extends ListBedMenu {
     protected List<SimpleRecyclerItem> onCreateItems(boolean portrait) {
         lastUid = SliceBeam.CONFIG_UID;
         List<SimpleRecyclerItem> items = new ArrayList<>(Arrays.asList(
-                new BedMenuItem(R.string.MenuSliceInfo, R.drawable.square_stack_up_outline_28).onClick(v -> fragment.showUnfoldMenu(new LayersMenu(), v)),
+                new BedMenuItem(R.string.MenuSliceInfo, R.drawable.clock_circle_dashed_outline_24).onClick(v -> fragment.showUnfoldMenu(new InfoMenu(), v)),
+                new BedMenuItem(R.string.MenuSliceLayers, R.drawable.square_stack_up_outline_28).onClick(v -> fragment.showUnfoldMenu(new LayersMenu(), v)),
                 new BedMenuItem(R.string.MenuSliceExportToFile, R.drawable.folder_simple_arrow_right_outline_28).onClick(v -> {
                     if (fragment.getContext() instanceof Activity) {
                         Activity act = (Activity) fragment.getContext();
@@ -176,15 +183,305 @@ public class SliceMenu extends ListBedMenu {
         });
     }
 
+    private final static class InfoMenu extends UnfoldMenu implements IThemeView {
+        private TextView totalView;
+        private SegmentsView segmentsView;
+        private ExtrusionRoleView[] roleViews = new ExtrusionRoleView[GCodeViewer.EXTRUSION_ROLES_COUNT];
+
+        private GCodeViewer getViewer() {
+            return fragment.getGlView().getRenderer().getViewer();
+        }
+
+        @Override
+        protected View onCreateView(Context ctx, boolean portrait) {
+            LinearLayout ll = new LinearLayout(ctx);
+            ll.setOrientation(LinearLayout.VERTICAL);
+
+            ll.addView(new Space(ctx), new LinearLayout.LayoutParams(0, 0, 1f));
+
+            for (int i = 0; i < GCodeViewer.EXTRUSION_ROLES_COUNT; i++) {
+                ll.addView(roleViews[i] = new ExtrusionRoleView(ctx));
+            }
+
+            ll.addView(new DividerView(ctx), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(1f)));
+
+            totalView = new TextView(ctx);
+            totalView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            totalView.setGravity(Gravity.CENTER);
+            ll.addView(totalView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(18)) {{
+                topMargin = ViewUtils.dp(8);
+            }});
+
+            segmentsView = new SegmentsView(ctx);
+            ll.addView(segmentsView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(12)) {{
+                leftMargin = rightMargin = ViewUtils.dp(12);
+                topMargin = bottomMargin = ViewUtils.dp(8);
+            }});
+
+            ll.addView(new DividerView(ctx), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(1f)));
+            LinearLayout toolbar = new LinearLayout(ctx);
+            toolbar.setPadding(ViewUtils.dp(12), 0, ViewUtils.dp(12), 0);
+            toolbar.setOrientation(LinearLayout.HORIZONTAL);
+            toolbar.setGravity(Gravity.CENTER_VERTICAL);
+            toolbar.setBackground(ViewUtils.createRipple(ThemesRepo.getColor(android.R.attr.colorControlHighlight), 0));
+            toolbar.setOnClickListener(v -> dismiss());
+
+            ImageView icon = new ImageView(ctx);
+            icon.setImageResource(R.drawable.arrow_left_outline_28);
+            icon.setColorFilter(ThemesRepo.getColor(android.R.attr.textColorSecondary));
+            toolbar.addView(icon, new LinearLayout.LayoutParams(ViewUtils.dp(28), ViewUtils.dp(28)));
+
+            TextView title = new TextView(ctx);
+            title.setText(R.string.MenuOrientationPositionBack);
+            title.setTypeface(ViewUtils.getTypeface(ViewUtils.ROBOTO_MEDIUM));
+            title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
+            title.setTextColor(ThemesRepo.getColor(android.R.attr.textColorPrimary));
+            toolbar.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f) {{
+                leftMargin = ViewUtils.dp(12);
+            }});
+
+            ll.addView(toolbar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(52)));
+            onApplyTheme();
+            return ll;
+        }
+
+        @Override
+        protected void onCreate() {
+            super.onCreate();
+
+            GCodeViewer viewer = getViewer();
+            if (viewer != null) {
+                for (int i = 0; i < GCodeViewer.EXTRUSION_ROLES_COUNT; i++) {
+                    boolean visible = viewer.getEstimatedTime(i) != 0;
+                    roleViews[i].setVisibility(visible ? View.VISIBLE : View.GONE);
+                    if (visible) {
+                        roleViews[i].bind(viewer, i);
+                    }
+                }
+            }
+            updateValues();
+            ViewUtils.postOnMainThread(() -> segmentsView.startAnimation(), 50);
+        }
+
+        @Override
+        protected void onDestroy() {
+            super.onDestroy();
+
+            segmentsView.setNotVisible();
+        }
+
+        @Override
+        public int getRequestedSize(FrameLayout into, boolean portrait) {
+            if (portrait) {
+                GCodeViewer viewer = getViewer();
+                if (viewer != null) {
+                    int visibleCount = 0;
+                    for (int i = 0; i < GCodeViewer.EXTRUSION_ROLES_COUNT; i++) {
+                        if (viewer.getEstimatedTime(i) != 0) {
+                            visibleCount++;
+                        }
+                    }
+                    return ViewUtils.dp(42) * visibleCount + ViewUtils.dp(28) + ViewUtils.dp(52) + ViewUtils.dp(18 + 8);
+                }
+            }
+            return super.getRequestedSize(into, portrait);
+        }
+
+        private float getTotalEstimatedTime() {
+            GCodeViewer viewer = getViewer();
+            if (viewer == null) return 0;
+            float total = 0;
+            for (int i = 0; i < GCodeViewer.EXTRUSION_ROLES_COUNT; i++) {
+                if (viewer.isExtrusionRoleVisible(i)) {
+                    total += viewer.getEstimatedTime(i);
+                }
+            }
+            return total;
+        }
+
+        private void updateValues() {
+            GCodeViewer viewer = getViewer();
+            if (viewer == null) return;
+
+            float[] values = new float[2 + GCodeViewer.EXTRUSION_ROLES_COUNT];
+            values[0] = 0;
+            values[values.length - 1] = 1;
+            float prev = 0;
+            int lastVisible = 0;
+            float total = getTotalEstimatedTime();
+            for (int i = 0; i < GCodeViewer.EXTRUSION_ROLES_COUNT; i++) {
+                if (viewer.isExtrusionRoleVisible(i)) {
+                    float percent = viewer.getEstimatedTime(i) / total;
+                    values[i + 1] = prev + percent;
+                    lastVisible = i;
+                    prev = values[i + 1];
+                } else {
+                    values[i + 1] = prev;
+                }
+            }
+
+            values[lastVisible] = 1;
+
+            segmentsView.setValues(values);
+            totalView.setText(formatTime(total));
+        }
+
+        private static String formatTime(float time) {
+            int secondsTotal = Math.round(time);
+            int seconds = secondsTotal % 60;
+            int minutes = ((secondsTotal - seconds) / 60) % 60;
+            int hours = ((secondsTotal - seconds) / 60) / 60;
+
+            StringBuilder sb = new StringBuilder();
+            if (hours > 0) {
+                sb.append(hours).append(" ").append(SliceBeam.INSTANCE.getString(R.string.MenuSliceInfoHour));
+            }
+            if (minutes > 0) {
+                if (sb.length() > 0) sb.append(" ");
+
+                sb.append(minutes).append(" ").append(SliceBeam.INSTANCE.getString(R.string.MenuSliceInfoMinute));
+            }
+            if (seconds > 0) {
+                if (sb.length() > 0) sb.append(" ");
+
+                sb.append(seconds).append(" ").append(SliceBeam.INSTANCE.getString(R.string.MenuSliceInfoSecond));
+            }
+
+            return sb.toString();
+        }
+
+        @Override
+        public void onApplyTheme() {
+            totalView.setTextColor(ThemesRepo.getColor(android.R.attr.textColorSecondary));
+        }
+
+        private final class ExtrusionRoleView extends LinearLayout implements IThemeView {
+            private MaterialCheckBox checkBox;
+            private TextView titleView;
+            private TextView timeView;
+
+            private Runnable invalidateGl;
+
+            public ExtrusionRoleView(Context context) {
+                super(context);
+                setOrientation(HORIZONTAL);
+                setGravity(Gravity.CENTER_VERTICAL);
+                setPadding(ViewUtils.dp(12), 0, ViewUtils.dp(16), 0);
+
+                checkBox = new MaterialCheckBox(getContext()) {
+                    @Override
+                    public boolean dispatchTouchEvent(MotionEvent event) {
+                        return false;
+                    }
+                };
+                addView(checkBox, new LinearLayout.LayoutParams(ViewUtils.dp(28), ViewUtils.dp(28)));
+
+                titleView = new TextView(context);
+                titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+                addView(titleView, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f) {{
+                    leftMargin = rightMargin = ViewUtils.dp(12);
+                }});
+
+                timeView = new TextView(context);
+                timeView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+                addView(timeView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+                setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(42)));
+                onApplyTheme();
+            }
+
+            public void bind(GCodeViewer viewer, @GCodeViewer.ExtrusionRole int role) {
+                switch (role) {
+                    case GCodeViewer.EXTRUSION_ROLE_NONE:
+                        titleView.setText(Slic3rLocalization.getString("Unknown"));
+                        break;
+                    case GCodeViewer.EXTRUSION_ROLE_PERIMETER:
+                        titleView.setText(Slic3rLocalization.getString("Perimeter"));
+                        break;
+                    case GCodeViewer.EXTRUSION_ROLE_EXTERNAL_PERIMETER:
+                        titleView.setText(Slic3rLocalization.getString("External perimeter"));
+                        break;
+                    case GCodeViewer.EXTRUSION_ROLE_OVERHANG_PERIMETER:
+                        titleView.setText(Slic3rLocalization.getString("Overhang perimeter"));
+                        break;
+                    case GCodeViewer.EXTRUSION_ROLE_INTERNAL_INFILL:
+                        titleView.setText(Slic3rLocalization.getString("Internal infill"));
+                        break;
+                    case GCodeViewer.EXTRUSION_ROLE_SOLID_INFILL:
+                        titleView.setText(Slic3rLocalization.getString("Solid infill"));
+                        break;
+                    case GCodeViewer.EXTRUSION_ROLE_TOP_SOLID_INFILL:
+                        titleView.setText(Slic3rLocalization.getString("Top solid infill"));
+                        break;
+                    case GCodeViewer.EXTRUSION_ROLE_IRONING:
+                        titleView.setText(Slic3rLocalization.getString("Ironing"));
+                        break;
+                    case GCodeViewer.EXTRUSION_ROLE_BRIDGE_INFILL:
+                        titleView.setText(Slic3rLocalization.getString("Bridge infill"));
+                        break;
+                    case GCodeViewer.EXTRUSION_ROLE_GAP_FILL:
+                        titleView.setText(Slic3rLocalization.getString("Gap fill"));
+                        break;
+                    case GCodeViewer.EXTRUSION_ROLE_SKIRT:
+                        titleView.setText(Slic3rLocalization.getString("Skirt/Brim"));
+                        break;
+                    case GCodeViewer.EXTRUSION_ROLE_SUPPORT_MATERIAL:
+                        titleView.setText(Slic3rLocalization.getString("Support material"));
+                        break;
+                    case GCodeViewer.EXTRUSION_ROLE_SUPPORT_MATERIAL_INTERFACE:
+                        titleView.setText(Slic3rLocalization.getString("Support material interface"));
+                        break;
+                    case GCodeViewer.EXTRUSION_ROLE_WIPE_TOWER:
+                        titleView.setText(Slic3rLocalization.getString("Wipe tower"));
+                        break;
+                    case GCodeViewer.EXTRUSION_ROLE_CUSTOM:
+                        titleView.setText(Slic3rLocalization.getString("Custom"));
+                        break;
+                }
+
+                timeView.setText(formatTime(viewer.getEstimatedTime(role)));
+
+                checkBox.setChecked(viewer.isExtrusionRoleVisible(role));
+                checkBox.setButtonTintList(ColorStateList.valueOf(SegmentsView.mapColor(role)));
+                setOnClickListener(v -> {
+                    if (getTotalEstimatedTime() == viewer.getEstimatedTime(role)) {
+                        return;
+                    }
+
+                    viewer.toggleExtrusionRoleVisible(role);
+                    checkBox.setChecked(!checkBox.isChecked());
+                    updateValues();
+                    if (invalidateGl != null) ViewUtils.removeCallbacks(invalidateGl);
+                    ViewUtils.postOnMainThread(invalidateGl = () -> {
+                        Pair<Long, Long> p = viewer.getLayersViewRange();
+                        viewer.setLayersViewRange(p.first, p.second);
+                        fragment.getGlView().requestRender();
+                    }, 250);
+                });
+            }
+
+            @Override
+            public void onApplyTheme() {
+                titleView.setTextColor(ThemesRepo.getColor(android.R.attr.textColorPrimary));
+                timeView.setTextColor(ThemesRepo.getColor(android.R.attr.textColorSecondary));
+                setBackground(ViewUtils.createRipple(ThemesRepo.getColor(android.R.attr.colorControlHighlight), 12));
+            }
+        }
+    }
+
     private final static class LayersMenu extends UnfoldMenu {
         private PositionScrollView fromTrack, toTrack;
         private TextView title;
+
+        private Runnable applyCallback;
 
         private GCodeViewer getViewer() {
             return fragment.getGlView().getRenderer().getViewer();
         }
 
         private void applyView(int from, int to) {
+            if (applyCallback != null) ViewUtils.removeCallbacks(applyCallback);
+
             GCodeViewer viewer = getViewer();
             if (viewer == null) {
                 return;
@@ -218,15 +515,20 @@ public class SliceMenu extends ListBedMenu {
                 if (toTrack.getCurrentPosition() < integer) {
                     toTrack.setCurrentPosition(integer);
                 }
-                applyView(integer, toTrack.getCurrentPosition());
+                title.setText(fragment.getContext().getString(R.string.MenuSliceInfoLayers, fromTrack.getCurrentPosition(), integer));
+
+                ViewUtils.removeCallbacks(applyCallback);
+                ViewUtils.postOnMainThread(applyCallback = ()-> applyView(integer, toTrack.getCurrentPosition()), 50);
             });
             fromTrack.setListener(integer -> applyView(integer, toTrack.getCurrentPosition()));
             ll.addView(fromTrack, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(80)));
 
             toTrack = new PositionScrollView(ctx);
             toTrack.setProgressListener(integer -> {
-                // TODO: apply only visual?
-                applyView(fromTrack.getCurrentPosition(), integer);
+                title.setText(fragment.getContext().getString(R.string.MenuSliceInfoLayers, fromTrack.getCurrentPosition(), integer));
+
+                ViewUtils.removeCallbacks(applyCallback);
+                ViewUtils.postOnMainThread(applyCallback = ()-> applyView(fromTrack.getCurrentPosition(), integer), 50);
             });
             toTrack.setListener(integer -> applyView(fromTrack.getCurrentPosition(), integer));
             ll.addView(toTrack, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(80)));
@@ -267,6 +569,7 @@ public class SliceMenu extends ListBedMenu {
             super.onCreate();
 
             GCodeViewer viewer = getViewer();
+            if (viewer == null) return;
             long max = viewer.getLayersCount();
             fromTrack.setMinMax(1, (int) max);
             toTrack.setMinMax(1, (int) max);
@@ -285,9 +588,6 @@ public class SliceMenu extends ListBedMenu {
 
             fromTrack.stopScroll();
             toTrack.stopScroll();
-            if (getViewer() != null) {
-                applyView(1, (int) getViewer().getLayersCount());
-            }
         }
     }
 }

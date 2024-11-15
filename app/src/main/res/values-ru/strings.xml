@@ -68,8 +68,11 @@
     <string name="MenuTransformMirrorZ">Отразить по Z</string>
     <string name="MenuModifiers">Модификаторы</string>
     <string name="MenuSlice">Нарезка</string>
-<!--    <string name="MenuSliceInfo">Информ.\nо печати</string>-->
-    <string name="MenuSliceInfo">Слои</string>
+    <string name="MenuSliceInfo">Информ.\nо печати</string>
+    <string name="MenuSliceInfoSecond">с.</string>
+    <string name="MenuSliceInfoMinute">мин.</string>
+    <string name="MenuSliceInfoHour">ч.</string>
+    <string name="MenuSliceLayers">Слои</string>
     <string name="MenuSliceInfoLayers">Слои %d - %d</string>
     <string name="MenuSliceExportToFile">Экспорт. в файл</string>
     <string name="MenuSliceShare">Отправка</string>

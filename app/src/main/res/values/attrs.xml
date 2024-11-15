@@ -9,13 +9,21 @@
     <attr name="dividerColor" format="reference|color"/>
     <attr name="dividerContrastColor" format="reference|color"/>
     <attr name="dialogBackground" format="reference|color"/>
-    <attr name="gcodeViewerSkirt" format="reference|color"/>
+    <attr name="gcodeViewerNone" format="reference|color"/>
+    <attr name="gcodeViewerPerimeter" format="reference|color"/>
     <attr name="gcodeViewerExternalPerimeter" format="reference|color"/>
-    <attr name="gcodeViewerSupportMaterial" format="reference|color"/>
-    <attr name="gcodeViewerSupportMaterialInterface" format="reference|color"/>
+    <attr name="gcodeViewerOverhangPerimeter" format="reference|color"/>
     <attr name="gcodeViewerInternalInfill" format="reference|color"/>
     <attr name="gcodeViewerSolidInfill" format="reference|color"/>
+    <attr name="gcodeViewerTopSolidInfill" format="reference|color"/>
+    <attr name="gcodeViewerIroning" format="reference|color"/>
+    <attr name="gcodeViewerBridgeInfill" format="reference|color"/>
+    <attr name="gcodeViewerGapFill" format="reference|color"/>
+    <attr name="gcodeViewerSkirt" format="reference|color"/>
+    <attr name="gcodeViewerSupportMaterial" format="reference|color"/>
+    <attr name="gcodeViewerSupportMaterialInterface" format="reference|color"/>
     <attr name="gcodeViewerWipeTower" format="reference|color"/>
+    <attr name="gcodeViewerCustom" format="reference|color"/>
     <attr name="switchThumbUncheckedColor" format="reference|color"/>
     <attr name="boostyColorTop" format="reference|color"/>
     <attr name="boostyColorBottom" format="reference|color"/>

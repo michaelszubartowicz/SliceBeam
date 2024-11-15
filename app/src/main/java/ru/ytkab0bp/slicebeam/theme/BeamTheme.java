@@ -27,13 +27,21 @@ public class BeamTheme {
         colors.put(R.attr.modelHoverColor, 0xffffffff);
         colors.put(R.attr.textColorNegative, 0xffff464a);
 
-        colors.put(R.attr.gcodeViewerSkirt, 0x7FFF7F);
-        colors.put(R.attr.gcodeViewerExternalPerimeter, 0xFFFF00);
-        colors.put(R.attr.gcodeViewerSupportMaterial, 0x7FFF7F);
-        colors.put(R.attr.gcodeViewerSupportMaterialInterface, 0x7FFF7F);
-        colors.put(R.attr.gcodeViewerInternalInfill, 0xFF7F7F);
-        colors.put(R.attr.gcodeViewerSolidInfill, 0xFF7F7F);
-        colors.put(R.attr.gcodeViewerWipeTower, 0xF7FF7F);
+        colors.put(R.attr.gcodeViewerNone, 0xFFE6B3B3);
+        colors.put(R.attr.gcodeViewerPerimeter, 0xFFFFE64D);
+        colors.put(R.attr.gcodeViewerExternalPerimeter, 0xFFFF7D38);
+        colors.put(R.attr.gcodeViewerOverhangPerimeter, 0xFF1F1FFF);
+        colors.put(R.attr.gcodeViewerInternalInfill, 0xFFB03029);
+        colors.put(R.attr.gcodeViewerSolidInfill, 0xFF9654CC);
+        colors.put(R.attr.gcodeViewerTopSolidInfill, 0xFFF04040);
+        colors.put(R.attr.gcodeViewerIroning, 0xFFFF8C69);
+        colors.put(R.attr.gcodeViewerBridgeInfill, 0xFF4D80BA);
+        colors.put(R.attr.gcodeViewerGapFill, 0xFF00876E);
+        colors.put(R.attr.gcodeViewerSkirt, 0xFF00876E);
+        colors.put(R.attr.gcodeViewerSupportMaterial, 0xFF00FF00);
+        colors.put(R.attr.gcodeViewerSupportMaterialInterface, 0xFF008000);
+        colors.put(R.attr.gcodeViewerWipeTower, 0xFFB3E3AB);
+        colors.put(R.attr.gcodeViewerCustom, 0xFF5ED194);
 
         colors.put(R.attr.xTrackColor, 0xffbf0000);
         colors.put(R.attr.yTrackColor, 0xff00bf00);
