@@ -45,6 +45,7 @@ import ru.ytkab0bp.slicebeam.view.BeamButton;
 import ru.ytkab0bp.slicebeam.view.BoostySubsView;
 
 public class ChangeLogBottomSheet extends BottomSheetDialog {
+    private BoostySubsView subsView;
     private ScrollView scrollView;
     private ViewPager pager;
 
@@ -154,7 +155,7 @@ public class ChangeLogBottomSheet extends BottomSheetDialog {
                     subtitle.setPadding(ViewUtils.dp(12), 0, ViewUtils.dp(12), 0);
                     ll.addView(subtitle);
 
-                    BoostySubsView subsView = new BoostySubsView(context);
+                    subsView = new BoostySubsView(context);
                     if (SliceBeam.SERVER_DATA != null) {
                         List<String> list = new ArrayList<>(SliceBeam.SERVER_DATA.boostySubscribers);
                         Collections.shuffle(list);
@@ -238,6 +239,11 @@ public class ChangeLogBottomSheet extends BottomSheetDialog {
 
     @EventHandler(runOnMainThread = true)
     public void onDataUpdated(BeamServerDataUpdatedEvent e) {
+        if (SliceBeam.SERVER_DATA != null) {
+            List<String> list = new ArrayList<>(SliceBeam.SERVER_DATA.boostySubscribers);
+            Collections.shuffle(list);
+            subsView.setStrings(list);
+        }
         pager.getAdapter().notifyDataSetChanged();
     }
 
