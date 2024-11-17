@@ -39,13 +39,15 @@ public class FilamentConfigFragment extends ProfileListFragment {
 
             List<ConfigObject> nList = new ArrayList<>(list.size());
             Slic3rUtils.ConfigChecker checker = new Slic3rUtils.ConfigChecker(SliceBeam.CONFIG.findPrinter(printer).serialize());
-            Slic3rUtils.ConfigChecker printChecker = new Slic3rUtils.ConfigChecker(SliceBeam.CONFIG.findPrint(print).serialize());
-            for (ConfigObject obj : list) {
-                if (checker.checkCompatibility(obj.get("compatible_printers_condition")) && printChecker.checkCompatibility(obj.get("compatible_prints_condition"))) {
-                    nList.add(obj);
+            if (SliceBeam.CONFIG.findPrint(print) != null) {
+                Slic3rUtils.ConfigChecker printChecker = new Slic3rUtils.ConfigChecker(SliceBeam.CONFIG.findPrint(print).serialize());
+                for (ConfigObject obj : list) {
+                    if (checker.checkCompatibility(obj.get("compatible_printers_condition")) && printChecker.checkCompatibility(obj.get("compatible_prints_condition"))) {
+                        nList.add(obj);
+                    }
                 }
+                printChecker.release();
             }
-            printChecker.release();
             checker.release();
             lastPrinter = printer;
             lastPrint = print;
