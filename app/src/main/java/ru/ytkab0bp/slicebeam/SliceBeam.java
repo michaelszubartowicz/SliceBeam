@@ -66,7 +66,7 @@ public class SliceBeam extends Application {
                 throw new RuntimeException(e);
             }
         }
-        WebView.setWebContentsDebuggingEnabled(true);
+        WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
 
         Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
             StringWriter sw = new StringWriter();
