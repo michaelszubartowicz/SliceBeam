@@ -124,7 +124,7 @@ public class WebViewMenu extends UnfoldMenu {
 
     @Override
     public int getRequestedSize(FrameLayout into, boolean portrait) {
-        return portrait ? into.getHeight() : into.getWidth();
+        return portrait ? into.getHeight() - into.getPaddingTop() - into.getPaddingBottom() : into.getWidth();
     }
 
     private final class Bridge {

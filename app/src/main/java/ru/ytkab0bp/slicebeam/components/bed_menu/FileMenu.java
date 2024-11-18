@@ -18,6 +18,8 @@ import androidx.core.graphics.ColorUtils;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -36,13 +38,16 @@ import ru.ytkab0bp.slicebeam.components.UnfoldMenu;
 import ru.ytkab0bp.slicebeam.components.WebViewMenu;
 import ru.ytkab0bp.slicebeam.config.ConfigObject;
 import ru.ytkab0bp.slicebeam.events.NeedDismissCalibrationsMenu;
+import ru.ytkab0bp.slicebeam.events.NeedSnackbarEvent;
 import ru.ytkab0bp.slicebeam.events.ObjectsListChangedEvent;
 import ru.ytkab0bp.slicebeam.events.SelectedObjectChangedEvent;
+import ru.ytkab0bp.slicebeam.fragment.BedFragment;
 import ru.ytkab0bp.slicebeam.recycler.PreferenceItem;
 import ru.ytkab0bp.slicebeam.recycler.SimpleRecyclerAdapter;
 import ru.ytkab0bp.slicebeam.recycler.SimpleRecyclerItem;
 import ru.ytkab0bp.slicebeam.recycler.SpaceItem;
 import ru.ytkab0bp.slicebeam.slic3r.Bed3D;
+import ru.ytkab0bp.slicebeam.slic3r.Slic3rRuntimeError;
 import ru.ytkab0bp.slicebeam.theme.BeamTheme;
 import ru.ytkab0bp.slicebeam.theme.ThemesRepo;
 import ru.ytkab0bp.slicebeam.utils.ViewUtils;
@@ -214,7 +219,7 @@ public class FileMenu extends ListBedMenu {
     public final class CalibrationsMenu extends UnfoldMenu {
 
         public int getRequestedSize(FrameLayout into, boolean portrait) {
-            return (int) (portrait ? into.getHeight() * 0.3f : into.getWidth() * 0.6f);
+            return (int) (portrait ? into.getHeight() * 0.35f : into.getWidth() * 0.6f);
         }
 
         private String loadJSLoader(String key) {
@@ -309,6 +314,11 @@ public class FileMenu extends ListBedMenu {
                         if (ctx instanceof MainActivity) {
                             ((MainActivity) ctx).showUnfoldMenu(new WebViewMenu(Uri.parse("https://k3d.tech/calibrations/retractions/calibrator/").buildUpon().appendQueryParameter("lang", getK3DLanguage()).build(), loadJSLoader("k3d_rct")).setFragment(fragment), v);
                         }
+                    }),
+                    new PreferenceItem().setIcon(R.drawable.deployed_code_24).setTitle(ctx.getString(R.string.MenuFileCalibrationsModels)).setSubtitle(ctx.getString(R.string.MenuFileCalibrationsModelsDescription)).setOnClickListener(v -> {
+                        if (ctx instanceof MainActivity) {
+                            ((MainActivity) ctx).showUnfoldMenu(new CalibrationModelsMenu().setFragment(fragment), v);
+                        }
                     })
             ));
             rv.setAdapter(adapter);
@@ -357,6 +367,113 @@ public class FileMenu extends ListBedMenu {
             super.onDestroy();
 
             SliceBeam.EVENT_BUS.unregisterListener(this);
+        }
+    }
+
+    public final static class CalibrationModelsMenu extends UnfoldMenu {
+        private void loadModel(String key) {
+            BedFragment fragment = this.fragment;
+            ViewUtils.postOnMainThread(() -> {
+                File f = new File(SliceBeam.getModelCacheDir(), "calibration_" + key + ".stl");
+                new Thread(()->{
+                    try {
+                        InputStream in = SliceBeam.INSTANCE.getAssets().open("models/" + key + ".stl");
+                        FileOutputStream fos = new FileOutputStream(f);
+                        byte[] buffer = new byte[10240]; int c;
+                        while ((c = in.read(buffer)) != -1) {
+                            fos.write(buffer, 0, c);
+                        }
+                        fos.close();
+                        in.close();
+
+                        ViewUtils.postOnMainThread(() -> {
+                            try {
+                                if (f.getName().endsWith(".gcode")) {
+                                    fragment.loadGCode(f);
+                                } else {
+                                    fragment.loadModel(f);
+                                    SliceBeam.EVENT_BUS.fireEvent(new ObjectsListChangedEvent());
+                                }
+                                SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(R.string.MenuFileOpenFileLoaded));
+                            } catch (Slic3rRuntimeError e) {
+                                f.delete();
+
+                                ViewUtils.postOnMainThread(() -> new BeamAlertDialogBuilder(fragment.getContext())
+                                        .setTitle(R.string.MenuFileOpenFileFailed)
+                                        .setMessage(e.toString())
+                                        .setPositiveButton(android.R.string.ok, null)
+                                        .show());
+                            }
+                        });
+                    } catch (Exception e) {
+                        f.delete();
+                        ViewUtils.postOnMainThread(() -> new BeamAlertDialogBuilder(fragment.getContext())
+                                .setTitle(R.string.MenuFileOpenFileFailed)
+                                .setMessage(e.toString())
+                                .setPositiveButton(android.R.string.ok, null)
+                                .show());
+                    }
+                }).start();
+            }, 200);
+            SliceBeam.EVENT_BUS.fireEvent(new NeedDismissCalibrationsMenu());
+            dismiss(true);
+        }
+
+        @Override
+        protected View onCreateView(Context ctx, boolean portrait) {
+            LinearLayout ll = new LinearLayout(ctx);
+            ll.setOrientation(LinearLayout.VERTICAL);
+
+            LinearLayout toolbar = new LinearLayout(ctx);
+            toolbar.setPadding(ViewUtils.dp(12), 0, ViewUtils.dp(12), 0);
+            toolbar.setOrientation(LinearLayout.HORIZONTAL);
+            toolbar.setGravity(Gravity.CENTER_VERTICAL);
+            toolbar.setBackground(ViewUtils.createRipple(ThemesRepo.getColor(android.R.attr.colorControlHighlight), 0));
+            toolbar.setOnClickListener(v -> dismiss());
+
+            ImageView icon = new ImageView(ctx);
+            icon.setImageResource(R.drawable.arrow_left_outline_28);
+            icon.setColorFilter(ThemesRepo.getColor(android.R.attr.textColorSecondary));
+            toolbar.addView(icon, new LinearLayout.LayoutParams(ViewUtils.dp(28), ViewUtils.dp(28)));
+
+            TextView title = new TextView(ctx);
+            title.setText(R.string.MenuOrientationPositionBack);
+            title.setTypeface(ViewUtils.getTypeface(ViewUtils.ROBOTO_MEDIUM));
+            title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
+            title.setTextColor(ThemesRepo.getColor(android.R.attr.textColorPrimary));
+            toolbar.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f) {{
+                leftMargin = ViewUtils.dp(12);
+            }});
+            ll.addView(toolbar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(52)));
+
+            ll.addView(new DividerView(ctx), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(1f)));
+
+            RecyclerView rv = new FadeRecyclerView(ctx);
+            SimpleRecyclerAdapter adapter = new SimpleRecyclerAdapter();
+            adapter.setItems(Arrays.asList(
+                    new PreferenceItem().setIcon(R.drawable.model_3dbenchy).setNoTint(true).setRoundRadius(ViewUtils.dp(8)).setTitle(ctx.getString(R.string.MenuFileCalibrationsModels3DBenchy)).setOnClickListener(v -> loadModel("3dbenchy")),
+                    new PreferenceItem().setIcon(R.drawable.model_xyz_cube).setNoTint(true).setRoundRadius(ViewUtils.dp(8)).setTitle(ctx.getString(R.string.MenuFileCalibrationsModelsXYZCube)).setOnClickListener(v -> loadModel("xyz_cube")),
+                    new PreferenceItem().setIcon(R.drawable.model_bunny).setNoTint(true).setRoundRadius(ViewUtils.dp(8)).setTitle(ctx.getString(R.string.MenuFileCalibrationsModelsBunny)).setOnClickListener(v -> loadModel("bunny")),
+                    new PreferenceItem().setIcon(R.drawable.model_fox).setNoTint(true).setRoundRadius(ViewUtils.dp(8)).setTitle(ctx.getString(R.string.MenuFileCalibrationsModelsFox)).setOnClickListener(v -> loadModel("fox")),
+                    new PreferenceItem().setIcon(R.drawable.model_box).setNoTint(true).setRoundRadius(ViewUtils.dp(8)).setTitle(ctx.getString(R.string.MenuFileCalibrationsModelsBox)).setOnClickListener(v -> loadModel("box")),
+                    new PreferenceItem().setIcon(R.drawable.model_cone).setNoTint(true).setRoundRadius(ViewUtils.dp(8)).setTitle(ctx.getString(R.string.MenuFileCalibrationsModelsCone)).setOnClickListener(v -> loadModel("cone")),
+                    new PreferenceItem().setIcon(R.drawable.model_cylinder).setNoTint(true).setRoundRadius(ViewUtils.dp(8)).setTitle(ctx.getString(R.string.MenuFileCalibrationsModelsCylinder)).setOnClickListener(v -> loadModel("cylinder")),
+                    new PreferenceItem().setIcon(R.drawable.model_pyramid).setNoTint(true).setRoundRadius(ViewUtils.dp(8)).setTitle(ctx.getString(R.string.MenuFileCalibrationsModelsPyramid)).setOnClickListener(v -> loadModel("pyramid")),
+                    new PreferenceItem().setIcon(R.drawable.model_sphere).setNoTint(true).setRoundRadius(ViewUtils.dp(8)).setTitle(ctx.getString(R.string.MenuFileCalibrationsModelsSphere)).setOnClickListener(v -> loadModel("sphere"))
+            ));
+            rv.setAdapter(adapter);
+            ll.addView(rv, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+            return ll;
+        }
+
+        @Override
+        public int getRequestedSize(FrameLayout into, boolean portrait) {
+            return portrait ? into.getHeight() - into.getPaddingTop() - into.getPaddingBottom() : into.getWidth();
+        }
+
+        public CalibrationModelsMenu setFragment(BedFragment fragment) {
+            this.fragment = fragment;
+            return this;
         }
     }
 }

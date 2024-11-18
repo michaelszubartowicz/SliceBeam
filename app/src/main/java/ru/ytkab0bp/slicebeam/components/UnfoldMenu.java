@@ -74,7 +74,9 @@ public abstract class UnfoldMenu {
 
     private void show(View from, BedFragment fragment, FrameLayout into) {
         if (isVisible) return;
-        this.fragment = fragment;
+        if (fragment != null) {
+            this.fragment = fragment;
+        }
         this.isVisible = true;
         this.containerLayout = into;
 
@@ -96,7 +98,7 @@ public abstract class UnfoldMenu {
         fromTranslationX = pos[0] - intoPos[0];
         fromTranslationY = pos[1] - intoPos[1];
         toTranslationX = 0;
-        toTranslationY = portrait ? into.getHeight() - side : 0;
+        toTranslationY = portrait ? into.getHeight() - side - into.getPaddingTop() - into.getPaddingBottom() : 0;
         rootView = new FrameLayout(ctx) {
             {
                 setWillNotDraw(false);

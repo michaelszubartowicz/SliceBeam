@@ -18,6 +18,16 @@
     <string name="MenuFileCalibrationsLADescription">Калибровка Linear/Pressure Advance</string>
     <string name="MenuFileCalibrationsRetract">K3D Откаты</string>
     <string name="MenuFileCalibrationsRetractDescription">Калибровка расстояния и скорости откатов</string>
+    <string name="MenuFileCalibrationsModels">Калибровочные модели</string>
+    <string name="MenuFileCalibrationsModelsDescription">Библиотека калибровочных моделей</string>
+    <string name="MenuFileCalibrationsModelsXYZCube">Калибровочный куб</string>
+    <string name="MenuFileCalibrationsModelsBunny">Заяц</string>
+    <string name="MenuFileCalibrationsModelsFox">Лис</string>
+    <string name="MenuFileCalibrationsModelsBox">Куб</string>
+    <string name="MenuFileCalibrationsModelsCone">Конус</string>
+    <string name="MenuFileCalibrationsModelsCylinder">Цилиндр</string>
+    <string name="MenuFileCalibrationsModelsPyramid">Пирамида</string>
+    <string name="MenuFileCalibrationsModelsSphere">Сфера</string>
     <string name="MenuFileOpenFileLoaded">Файл загружен.</string>
     <string name="MenuFileImportProfiles">Импорт. профилей</string>
     <string name="MenuFileImportProfilesFailed">Не удалось импортировать</string>

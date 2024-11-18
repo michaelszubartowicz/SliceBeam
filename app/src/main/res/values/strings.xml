@@ -20,6 +20,17 @@
     <string name="MenuFileCalibrationsLADescription">Linear/Pressure Advance Calibration</string>
     <string name="MenuFileCalibrationsRetract">K3D Retractions</string>
     <string name="MenuFileCalibrationsRetractDescription">Retraction distance and speed calibration</string>
+    <string name="MenuFileCalibrationsModels">Calibration models</string>
+    <string name="MenuFileCalibrationsModelsDescription">Calibration models library</string>
+    <string name="MenuFileCalibrationsModels3DBenchy" translatable="false">3D Benchy</string>
+    <string name="MenuFileCalibrationsModelsXYZCube">Calibration cube</string>
+    <string name="MenuFileCalibrationsModelsBunny">Bunny</string>
+    <string name="MenuFileCalibrationsModelsFox">Fox</string>
+    <string name="MenuFileCalibrationsModelsBox">Box</string>
+    <string name="MenuFileCalibrationsModelsCone">Cone</string>
+    <string name="MenuFileCalibrationsModelsCylinder">Cylinder</string>
+    <string name="MenuFileCalibrationsModelsPyramid">Pyramid</string>
+    <string name="MenuFileCalibrationsModelsSphere">Sphere</string>
     <string name="MenuFileImportProfiles">Import profiles</string>
     <string name="MenuFileImportProfilesFailed">Import failed</string>
     <string name="MenuFileImportProfilesFailedNotIni">Not an .ini file</string>

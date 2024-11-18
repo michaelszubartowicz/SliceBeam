@@ -2,6 +2,8 @@ package ru.ytkab0bp.slicebeam.recycler;
 
 import android.content.Context;
 import android.content.res.ColorStateList;
+import android.graphics.Canvas;
+import android.graphics.Path;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.text.TextUtils;
@@ -13,6 +15,8 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.widget.AppCompatImageView;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -29,6 +33,7 @@ public class PreferenceItem extends SimpleRecyclerItem<PreferenceItem.Preference
     private int textColorRes;
     private boolean noTint;
     private ValueProvider valueProvider;
+    private float roundRadius;
 
     public PreferenceItem setTitle(CharSequence title) {
         mTitle = title;
@@ -70,6 +75,11 @@ public class PreferenceItem extends SimpleRecyclerItem<PreferenceItem.Preference
         return this;
     }
 
+    public PreferenceItem setRoundRadius(float roundRadius) {
+        this.roundRadius = roundRadius;
+        return this;
+    }
+
     public PreferenceItem setTextColorRes(int textColorRes) {
         this.textColorRes = textColorRes;
         return this;
@@ -94,6 +104,7 @@ public class PreferenceItem extends SimpleRecyclerItem<PreferenceItem.Preference
         private TextView title, subtitle;
         private ImageView icon;
         private TextView value;
+        private float radius;
 
         public PreferenceHolderView(Context context) {
             super(context);
@@ -101,7 +112,23 @@ public class PreferenceItem extends SimpleRecyclerItem<PreferenceItem.Preference
             setOrientation(HORIZONTAL);
             setGravity(Gravity.CENTER_VERTICAL);
 
-            icon = new ImageView(context);
+            icon = new AppCompatImageView(context) {
+                private Path path = new Path();
+
+                @Override
+                public void draw(@NonNull Canvas canvas) {
+                    if (radius != 0) {
+                        canvas.save();
+                        path.rewind();
+                        path.addRoundRect(0, 0, getWidth(), getHeight(), radius, radius, Path.Direction.CW);
+                        canvas.clipPath(path);
+                    }
+                    super.draw(canvas);
+                    if (radius != 0) {
+                        canvas.restore();
+                    }
+                }
+            };
             icon.setLayoutParams(new LayoutParams(ViewUtils.dp(28), ViewUtils.dp(28)) {{
                 setMarginStart(ViewUtils.dp(4));
                 setMarginEnd(ViewUtils.dp(8));
@@ -178,6 +205,11 @@ public class PreferenceItem extends SimpleRecyclerItem<PreferenceItem.Preference
             } else {
                 icon.setImageTintList(ColorStateList.valueOf(ThemesRepo.getColor(item.textColorRes != 0 ? item.textColorRes : android.R.attr.textColorSecondary)));
             }
+            radius = item.roundRadius;
+            icon.invalidate();
+
+            ViewGroup.LayoutParams params = icon.getLayoutParams();
+            params.width = params.height = radius != 0 ? ViewUtils.dp(42) : ViewUtils.dp(28);
         }
 
         @Override
