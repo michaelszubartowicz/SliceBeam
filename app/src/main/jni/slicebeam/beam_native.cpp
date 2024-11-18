@@ -637,6 +637,73 @@ extern "C" {
         return env->NewStringUTF(ref->name.c_str());
     }
 
+    GCodeExtrusionRole mapGCodeRole(int index) {
+        GCodeExtrusionRole gRole;
+        switch (index) {
+            default:
+            case 0:
+                gRole = GCodeExtrusionRole::None;
+                break;
+            case 1:
+                gRole = GCodeExtrusionRole::Perimeter;
+                break;
+            case 2:
+                gRole = GCodeExtrusionRole::ExternalPerimeter;
+                break;
+            case 3:
+                gRole = GCodeExtrusionRole::OverhangPerimeter;
+                break;
+            case 4:
+                gRole = GCodeExtrusionRole::InternalInfill;
+                break;
+            case 5:
+                gRole = GCodeExtrusionRole::SolidInfill;
+                break;
+            case 6:
+                gRole = GCodeExtrusionRole::TopSolidInfill;
+                break;
+            case 7:
+                gRole = GCodeExtrusionRole::Ironing;
+                break;
+            case 8:
+                gRole = GCodeExtrusionRole::BridgeInfill;
+                break;
+            case 9:
+                gRole = GCodeExtrusionRole::GapFill;
+                break;
+            case 10:
+                gRole = GCodeExtrusionRole::Skirt;
+                break;
+            case 11:
+                gRole = GCodeExtrusionRole::SupportMaterial;
+                break;
+            case 12:
+                gRole = GCodeExtrusionRole::SupportMaterialInterface;
+                break;
+            case 13:
+                gRole = GCodeExtrusionRole::WipeTower;
+                break;
+            case 14:
+                gRole = GCodeExtrusionRole::Custom;
+                break;
+        }
+        return gRole;
+    }
+
+    JNIEXPORT jdouble JNICALL Java_ru_ytkab0bp_slicebeam_slic3r_Native_gcoderesult_1get_1used_1filament_1mm(JNIEnv* env, jclass, jlong ptr, jint role) {
+        GCodeResultRef* ref = (GCodeResultRef*) (intptr_t) ptr;
+
+        std::pair<double, double> info = ref->result.print_statistics.used_filaments_per_role.find(mapGCodeRole(role))->second;
+        return info.first * 1000.0 / 25.4;
+    }
+
+    JNIEXPORT jdouble JNICALL Java_ru_ytkab0bp_slicebeam_slic3r_Native_gcoderesult_1get_1used_1filament_1g(JNIEnv* env, jclass, jlong ptr, jint role) {
+        GCodeResultRef* ref = (GCodeResultRef*) (intptr_t) ptr;
+
+        std::pair<double, double> info = ref->result.print_statistics.used_filaments_per_role.find(mapGCodeRole(role))->second;
+        return info.second;
+    }
+
     JNIEXPORT void JNICALL Java_ru_ytkab0bp_slicebeam_slic3r_Native_gcoderesult_1release(JNIEnv* env, jclass, jlong ptr) {
         GCodeResultRef* ref = (GCodeResultRef*) (intptr_t) ptr;
         delete ref;

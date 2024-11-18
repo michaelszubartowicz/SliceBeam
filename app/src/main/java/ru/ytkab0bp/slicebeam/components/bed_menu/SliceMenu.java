@@ -2,6 +2,7 @@ package ru.ytkab0bp.slicebeam.components.bed_menu;
 
 import static ru.ytkab0bp.slicebeam.utils.DebugUtils.assertTrue;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -35,6 +36,7 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -53,6 +55,7 @@ import ru.ytkab0bp.slicebeam.config.ConfigObject;
 import ru.ytkab0bp.slicebeam.events.NeedSnackbarEvent;
 import ru.ytkab0bp.slicebeam.fragment.BedFragment;
 import ru.ytkab0bp.slicebeam.recycler.SimpleRecyclerItem;
+import ru.ytkab0bp.slicebeam.slic3r.GCodeProcessorResult;
 import ru.ytkab0bp.slicebeam.slic3r.GCodeViewer;
 import ru.ytkab0bp.slicebeam.slic3r.Slic3rLocalization;
 import ru.ytkab0bp.slicebeam.theme.IThemeView;
@@ -187,9 +190,14 @@ public class SliceMenu extends ListBedMenu {
         private TextView totalView;
         private SegmentsView segmentsView;
         private ExtrusionRoleView[] roleViews = new ExtrusionRoleView[GCodeViewer.EXTRUSION_ROLES_COUNT];
+        private static DecimalFormat format = new DecimalFormat("0.##");
 
         private GCodeViewer getViewer() {
             return fragment.getGlView().getRenderer().getViewer();
+        }
+
+        private GCodeProcessorResult getResult() {
+            return fragment.getGlView().getRenderer().getGcodeResult();
         }
 
         @Override
@@ -250,12 +258,13 @@ public class SliceMenu extends ListBedMenu {
             super.onCreate();
 
             GCodeViewer viewer = getViewer();
+            GCodeProcessorResult result = getResult();
             if (viewer != null) {
                 for (int i = 0; i < GCodeViewer.EXTRUSION_ROLES_COUNT; i++) {
                     boolean visible = viewer.getEstimatedTime(i) != 0;
                     roleViews[i].setVisibility(visible ? View.VISIBLE : View.GONE);
                     if (visible) {
-                        roleViews[i].bind(viewer, i);
+                        roleViews[i].bind(viewer, result, i);
                     }
                 }
             }
@@ -299,22 +308,28 @@ public class SliceMenu extends ListBedMenu {
             return total;
         }
 
+        @SuppressLint("SetTextI18n")
         private void updateValues() {
             GCodeViewer viewer = getViewer();
+            GCodeProcessorResult result = getResult();
             if (viewer == null) return;
 
             float[] values = new float[2 + GCodeViewer.EXTRUSION_ROLES_COUNT];
+            double totalWeight = 0;
+            double totalLength = 0;
             values[0] = 0;
             values[values.length - 1] = 1;
             float prev = 0;
             int lastVisible = 0;
-            float total = getTotalEstimatedTime();
+            float totalTime = getTotalEstimatedTime();
             for (int i = 0; i < GCodeViewer.EXTRUSION_ROLES_COUNT; i++) {
                 if (viewer.isExtrusionRoleVisible(i)) {
-                    float percent = viewer.getEstimatedTime(i) / total;
+                    float percent = viewer.getEstimatedTime(i) / totalTime;
                     values[i + 1] = prev + percent;
                     lastVisible = i;
                     prev = values[i + 1];
+                    totalLength += result.getUsedFilamentMM(i);
+                    totalWeight += result.getUsedFilamentG(i);
                 } else {
                     values[i + 1] = prev;
                 }
@@ -323,11 +338,21 @@ public class SliceMenu extends ListBedMenu {
             values[lastVisible] = 1;
 
             segmentsView.setValues(values);
-            totalView.setText(formatTime(total));
+            totalView.setText(formatComplex(totalWeight, totalLength, totalTime));
+        }
+
+        private static String formatComplex(double weight, double length, float time) {
+            StringBuilder sb = new StringBuilder();
+            if (weight > 0) {
+                sb.append(format.format(weight)).append(" ").append(SliceBeam.INSTANCE.getString(R.string.MenuSliceInfoWeight)).append(" | ");
+            }
+            sb.append(format.format(length)).append(" ").append(SliceBeam.INSTANCE.getString(R.string.MenuSliceInfoLength)).append(" | ");
+            sb.append(formatTime(time));
+            return sb.toString();
         }
 
         private static String formatTime(float time) {
-            int secondsTotal = Math.round(time);
+            int secondsTotal = (int) Math.round(Math.ceil(time));
             int seconds = secondsTotal % 60;
             int minutes = ((secondsTotal - seconds) / 60) % 60;
             int hours = ((secondsTotal - seconds) / 60) / 60;
@@ -341,7 +366,7 @@ public class SliceMenu extends ListBedMenu {
 
                 sb.append(minutes).append(" ").append(SliceBeam.INSTANCE.getString(R.string.MenuSliceInfoMinute));
             }
-            if (seconds > 0) {
+            if (seconds > 0 || sb.length() == 0) {
                 if (sb.length() > 0) sb.append(" ");
 
                 sb.append(seconds).append(" ").append(SliceBeam.INSTANCE.getString(R.string.MenuSliceInfoSecond));
@@ -379,18 +404,19 @@ public class SliceMenu extends ListBedMenu {
                 titleView = new TextView(context);
                 titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
                 addView(titleView, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f) {{
-                    leftMargin = rightMargin = ViewUtils.dp(12);
+                    leftMargin = ViewUtils.dp(12);
+                    rightMargin = ViewUtils.dp(8);
                 }});
 
                 timeView = new TextView(context);
-                timeView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+                timeView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
                 addView(timeView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
                 setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(42)));
                 onApplyTheme();
             }
 
-            public void bind(GCodeViewer viewer, @GCodeViewer.ExtrusionRole int role) {
+            public void bind(GCodeViewer viewer, GCodeProcessorResult result, @GCodeViewer.ExtrusionRole int role) {
                 switch (role) {
                     case GCodeViewer.EXTRUSION_ROLE_NONE:
                         titleView.setText(Slic3rLocalization.getString("Unknown"));
@@ -439,7 +465,7 @@ public class SliceMenu extends ListBedMenu {
                         break;
                 }
 
-                timeView.setText(formatTime(viewer.getEstimatedTime(role)));
+                timeView.setText(formatComplex(result.getUsedFilamentG(role), result.getUsedFilamentMM(role), viewer.getEstimatedTime(role)));
 
                 checkBox.setChecked(viewer.isExtrusionRoleVisible(role));
                 checkBox.setButtonTintList(ColorStateList.valueOf(SegmentsView.mapColor(role)));

@@ -73,6 +73,8 @@ class Native {
 
     static native long gcoderesult_load_file(String path, String name);
     static native String gcoderesult_get_recommended_name(long ptr);
+    static native double gcoderesult_get_used_filament_mm(long ptr, int role);
+    static native double gcoderesult_get_used_filament_g(long ptr, int role);
     static native void gcoderesult_release(long ptr);
 
     static native long vgcode_create();

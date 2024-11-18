@@ -84,6 +84,8 @@
     <string name="MenuSliceInfoSecond">s.</string>
     <string name="MenuSliceInfoMinute">min.</string>
     <string name="MenuSliceInfoHour">h.</string>
+    <string name="MenuSliceInfoWeight">g.</string>
+    <string name="MenuSliceInfoLength">mm.</string>
     <string name="MenuSliceLayers">Layers</string>
     <string name="MenuSliceInfoLayers">Layers %d - %d</string>
     <string name="MenuSliceExportToFile">Export to file</string>

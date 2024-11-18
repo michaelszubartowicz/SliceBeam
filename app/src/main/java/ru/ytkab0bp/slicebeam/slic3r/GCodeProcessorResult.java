@@ -13,6 +13,14 @@ public class GCodeProcessorResult {
         pointer = ptr;
     }
 
+    public double getUsedFilamentMM(@GCodeViewer.ExtrusionRole int role) {
+        return Native.gcoderesult_get_used_filament_mm(pointer, role);
+    }
+
+    public double getUsedFilamentG(@GCodeViewer.ExtrusionRole int role) {
+        return Native.gcoderesult_get_used_filament_g(pointer, role);
+    }
+
     public String getRecommendedName() {
         return Native.gcoderesult_get_recommended_name(pointer);
     }

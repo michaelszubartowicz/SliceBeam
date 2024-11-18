@@ -82,6 +82,8 @@
     <string name="MenuSliceInfoSecond">с.</string>
     <string name="MenuSliceInfoMinute">мин.</string>
     <string name="MenuSliceInfoHour">ч.</string>
+    <string name="MenuSliceInfoWeight">г.</string>
+    <string name="MenuSliceInfoLength">мм.</string>
     <string name="MenuSliceLayers">Слои</string>
     <string name="MenuSliceInfoLayers">Слои %d - %d</string>
     <string name="MenuSliceExportToFile">Экспорт. в файл</string>
