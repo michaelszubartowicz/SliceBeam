@@ -100,7 +100,9 @@ public class IOUtils {
                     vendor = "BBL";
                 } else if (type.equals("process")) {
                     int i = inherit.indexOf('@') + 1;
-                    vendor = inherit.substring(i, inherit.indexOf(' ', i));
+                    int j = inherit.indexOf(' ', i);
+                    if (j == -1) j = inherit.length();
+                    vendor = inherit.substring(i, j);
                 } else {
                     vendor = inherit.substring(0, inherit.indexOf(' '));
                 }

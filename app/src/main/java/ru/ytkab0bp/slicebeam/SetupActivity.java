@@ -100,7 +100,13 @@ public class SetupActivity extends AppCompatActivity {
 
     private final static String TAG = "SetupActivity";
 
-    private final static String PRUSA_REPOS_URL = "https://preset-repo-api.prusa3d.com/v1/repos";
+    private final static List<String> REPOS_URLS = Arrays.asList(
+            "https://preset-repo-api.prusa3d.com/v1/repos",
+            // QIDI's manifest should be adapted, they haven't put their idx file
+//            "https://raw.githubusercontent.com/QIDITECH/QIDISlicer/refs/heads/master/resources/profiles/ArchiveRepositoryManifest.json",
+            "https://raw.githubusercontent.com/utkabobr/SliceBeam/refs/heads/master/.profiledumpsrepo/manifest.json"
+    );
+
     private final static int REPOS_INDEX = 1;
     private final static int PROFILES_INDEX = 2;
     private static int BOOSTY_INDEX = 3;
@@ -488,49 +494,70 @@ public class SetupActivity extends AppCompatActivity {
 
     private void loadRepos(boolean fromPage) {
         isLoading = true;
-        client.get(PRUSA_REPOS_URL, new AsyncHttpResponseHandler() {
+        repos.clear();
+        List<String> finishedIndexes = new ArrayList<>();
+        Map<String, List<ProfilesRepo>> reposMap = new HashMap<String, List<ProfilesRepo>>() {
+            @Nullable
             @Override
-            public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
-                isLoading = false;
-                try {
-                    JSONArray arr = new JSONArray(new String(responseBody));
-                    for (int i = 0; i < arr.length(); i++) {
-                        JSONObject obj = arr.getJSONObject(i);
-                        if (obj.getString("id").endsWith("-fff")) {
-                            ProfilesRepo r = new ProfilesRepo();
-                            r.url = obj.getString("url");
-                            r.name = obj.getString("name");
-                            r.description = obj.getString("description");
-                            r.indexUrl = obj.getString("index_url");
-                            repos.add(r);
+            public List<ProfilesRepo> get(@Nullable Object key) {
+                List<ProfilesRepo> list = super.get(key);
+                if (list == null) put((String) key, list = new ArrayList<>());
+                return list;
+            }
+        };
+        for (String repo : REPOS_URLS) {
+            client.get(repo, new AsyncHttpResponseHandler() {
+                @Override
+                public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
+                    finishedIndexes.add(repo);
+                    try {
+                        JSONArray arr = new JSONArray(new String(responseBody));
+                        for (int i = 0; i < arr.length(); i++) {
+                            JSONObject obj = arr.getJSONObject(i);
+                            if (obj.getString("id").endsWith("-fff")) {
+                                ProfilesRepo r = new ProfilesRepo();
+                                r.url = obj.getString("url");
+                                r.name = obj.getString("name");
+                                r.description = obj.getString("description");
+                                r.indexUrl = obj.getString("index_url");
+                                reposMap.get(repo).add(r);
+                            }
                         }
+
+                        if (finishedIndexes.size() == REPOS_URLS.size()) {
+                            // Filter in the right way
+                            for (String repo : REPOS_URLS) {
+                                repos.addAll(reposMap.get(repo));
+                            }
+
+                            ViewUtils.postOnMainThread(() -> {
+                                isLoading = false;
+                                if (fromPage) {
+                                    reposItem.onReposLoaded();
+                                }
+                                pager.setUserInputEnabled(true);
+                                isReposLoaded = true;
+                            });
+                        }
+                    } catch (JSONException e) {
+                        throw new RuntimeException(e);
                     }
-
-                    ViewUtils.postOnMainThread(() -> {
-                        if (fromPage) {
-                            reposItem.onReposLoaded();
-                        }
-                        pager.setUserInputEnabled(true);
-                        isReposLoaded = true;
-                    });
-                } catch (JSONException e) {
-                    throw new RuntimeException(e);
                 }
-            }
 
-            @Override
-            public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
-                isLoading = false;
-                Log.e(TAG, "Failed to load repos", error);
-                if (fromPage) {
-                    ViewUtils.postOnMainThread(() -> {
-                        Toast.makeText(SliceBeam.INSTANCE, R.string.IntroFailedToLoadRepos, Toast.LENGTH_SHORT).show();
-                        fakeScroll(-1);
-                        pager.setUserInputEnabled(true);
-                    });
+                @Override
+                public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
+                    isLoading = false;
+                    Log.e(TAG, "Failed to load repos", error);
+                    if (fromPage) {
+                        ViewUtils.postOnMainThread(() -> {
+                            Toast.makeText(SliceBeam.INSTANCE, R.string.IntroFailedToLoadRepos, Toast.LENGTH_SHORT).show();
+                            fakeScroll(-1);
+                            pager.setUserInputEnabled(true);
+                        });
+                    }
                 }
-            }
-        });
+            });
+        }
     }
 
     @Override
