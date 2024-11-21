@@ -1,0 +1,10 @@
+[
+	{
+		"name": "Slice Beam's Vendor Dumps",
+		"description": "Profiles from proprietary slicers",
+		"visibility": "",
+		"id": "beamdumps-fff",
+		"url": "https://raw.githubusercontent.com/utkabobr/SliceBeam/refs/heads/master/.profiledumpsrepo/",
+		"index_url": "https://raw.githubusercontent.com/utkabobr/SliceBeam/refs/heads/master/.profiledumpsrepo/vendor_indices.zip"
+	}
+]
