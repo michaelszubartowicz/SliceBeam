@@ -580,7 +580,12 @@ public abstract class ProfileListFragment extends Fragment {
                                 labels[i] = Slic3rLocalization.getString(def.enumLabels[i]);
                             }
                         }
-                        builder.setSingleChoiceItems(labels, Arrays.asList(values).indexOf(opt(def, eIndex)), (dialog, which) -> {
+                        String val = opt(def, eIndex);
+                        int i = Arrays.asList(values).indexOf(val);
+                        if (i == -1 && val.matches("^\\d+$")) {
+                            i = Integer.parseInt(val);
+                        }
+                        builder.setSingleChoiceItems(labels, i, (dialog, which) -> {
                             updateConfigField(def, eIndex, values[which]);
                             // TODO: Update only value
                             recyclerView.getAdapter().notifyItemChanged(boundIndex);
@@ -700,7 +705,21 @@ public abstract class ProfileListFragment extends Fragment {
                         ((PreferenceItem) simpleItem).setTitle(null);
                     }
                 } else {
-                    ((PreferenceItem) simpleItem).setValueProvider(() -> def.type == ConfigOptionDef.ConfigOptionType.ENUM ? Slic3rLocalization.getString(def.enumLabels[Arrays.asList(def.enumValues).indexOf(opt(def, eIndex))]) : opt(def, eIndex));
+                    ((PreferenceItem) simpleItem).setValueProvider(() -> {
+                        if (def.type == ConfigOptionDef.ConfigOptionType.ENUM) {
+                            String v = opt(def, eIndex);
+                            int i = Arrays.asList(def.enumValues).indexOf(v);
+                            if (i != -1) {
+                                return Slic3rLocalization.getString(def.enumLabels[i]);
+                            } else if (v.matches("^\\d+$")) {
+                                return Slic3rLocalization.getString(def.enumLabels[Integer.parseInt(v)]);
+                            } else {
+                                return v;
+                            }
+                        } else {
+                            return opt(def, eIndex);
+                        }
+                    });
                 }
             }
             switch (def.type) {
