@@ -112,7 +112,9 @@ public class IOUtils {
                 ConfigObject _obj = downloadProfilesRecursively(vendor, type, inherit, supportedKeys);
                 for (Map.Entry<String, String> en : _obj.values.entrySet()) {
                     if (supportedKeys.contains(en.getKey())) {
-                        if (en.getKey().equals("ironing_type") && en.getValue().equals("no ironing")) {
+                        if (en.getKey().equals("printable_area")) {
+                            cfg.values.put("bed_shape", en.getValue());
+                        } else if (en.getKey().equals("ironing_type") && en.getValue().equals("no ironing")) {
                             cfg.values.put("ironing", "0");
                             cfg.values.put("ironing_type", "top");
                         } if (en.getKey().equals("start_filament_gcode") || en.getKey().equals("end_filament_gcode") ||
