@@ -3,6 +3,7 @@ package ru.ytkab0bp.slicebeam.render;
 import static android.opengl.GLES30.*;
 import static ru.ytkab0bp.slicebeam.utils.DebugUtils.assertTrue;
 
+import android.graphics.Color;
 import android.opengl.GLSurfaceView;
 import android.util.Log;
 
@@ -71,6 +72,10 @@ public class GLRenderer implements GLSurfaceView.Renderer {
     private Vec3d translate = new Vec3d();
     private Vec3d rotate = new Vec3d();
     private ArrayList<GLModel.HitResult> raycastHits = new ArrayList<>();
+
+    private Vec3d bbMin = new Vec3d(), bbMax = new Vec3d();
+    private boolean isInFlattenMode;
+    private ArrayList<GLModel> flattenPlanes = new ArrayList<>();
 
     public Camera getCamera() {
         return camera;
@@ -162,6 +167,36 @@ public class GLRenderer implements GLSurfaceView.Renderer {
             GLModel glModel = glModels.get(i);
             glModel.reset();
             glModel.initFrom(model, i);
+        }
+    }
+
+    public boolean invalidateFlattenMode() {
+        if (isInFlattenMode) {
+            setInFlattenMode(true);
+            return true;
+        }
+        return false;
+    }
+
+    public boolean resetFlattenMode() {
+        if (isInFlattenMode) {
+            setInFlattenMode(false);
+            return true;
+        }
+        return false;
+    }
+
+    public void setInFlattenMode(boolean inFlattenMode) {
+        isInFlattenMode = inFlattenMode;
+
+        for (int i = 0, c = flattenPlanes.size(); i < c; i++) {
+            flattenPlanes.get(i).release();
+        }
+        flattenPlanes.clear();
+
+        if (isInFlattenMode) {
+            List<GLModel> planes = model.createFlattenPlanes(selectedObject);
+            flattenPlanes.addAll(planes);
         }
     }
 
@@ -266,12 +301,12 @@ public class GLRenderer implements GLSurfaceView.Renderer {
                 if (selected) {
                     shader.stopUsing();
 
-                    GLShaderProgram dash = GLShadersManager.get(GLShadersManager.SHADER_FLAT);
+                    GLShaderProgram flat = GLShadersManager.get(GLShadersManager.SHADER_FLAT);
                     glLineWidth(ViewUtils.dp(1.5f));
 
-                    dash.startUsing();
-                    dash.setUniformMatrix4fv("view_model_matrix", outModelMatrix);
-                    dash.setUniformMatrix4fv("projection_matrix", projectionMatrix);
+                    flat.startUsing();
+                    flat.setUniformMatrix4fv("view_model_matrix", outModelMatrix);
+                    flat.setUniformMatrix4fv("projection_matrix", projectionMatrix);
 
                     if (selectionModel == null) {
                         selectionModel = new GLModel();
@@ -280,7 +315,30 @@ public class GLRenderer implements GLSurfaceView.Renderer {
                     selectionModel.setColor(hoverColor);
                     selectionModel.render();
 
-                    dash.stopUsing();
+                    flat.stopUsing();
+
+                    shader.startUsing();
+                }
+
+                if (isInFlattenMode) {
+                    shader.stopUsing();
+
+                    GLShaderProgram flat = GLShadersManager.get(GLShadersManager.SHADER_FLAT);
+
+                    flat.startUsing();
+                    glEnable(GL_BLEND);
+                    flat.setUniformMatrix4fv("view_model_matrix", outModelMatrix);
+                    flat.setUniformMatrix4fv("projection_matrix", projectionMatrix);
+
+                    for (GLModel plane : flattenPlanes) {
+                        boolean hoveringPlane = plane.isHovering;
+                        int clr = ColorUtils.blendARGB(hoverColor, color, hoveringPlane ? 1 : 0);
+                        plane.setColor(ColorUtils.setAlphaComponent(clr, (int) (Color.alpha(clr) * 0.75f)));
+                        plane.render();
+                    }
+
+                    glDisable(GL_BLEND);
+                    flat.stopUsing();
 
                     shader.startUsing();
                 }
@@ -337,9 +395,55 @@ public class GLRenderer implements GLSurfaceView.Renderer {
             }
         }
 
+        if (isInFlattenMode && (j == selectedObject || j == -1)) {
+            int minPlane = -1;
+            double minDistancePlane = Double.MAX_VALUE;
+
+            for (int i = 0, c = flattenPlanes.size(); i < c; i++) {
+                GLModel glModel = flattenPlanes.get(i);
+                glModel.getRaycaster().raycast(this, raycastHits, x, y);
+
+                double minDistanceRay = Double.MAX_VALUE;
+                if (!raycastHits.isEmpty()) {
+                    for (GLModel.HitResult res : raycastHits) {
+                        double distance = res.position.distance(camera.position);
+                        if (distance < minDistanceRay) {
+                            minDistanceRay = distance;
+                        }
+                    }
+                }
+                if (minDistanceRay < minDistancePlane) {
+                    minDistancePlane = minDistanceRay;
+                    minPlane = i;
+                }
+            }
+
+            if (minPlane != -1) {
+                GLModel glModel = flattenPlanes.get(minPlane);
+                model.flattenRotate(selectedObject, glModel);
+                model.getBoundingBoxExact(j, bbMin, bbMax);
+                model.translate(j, 0, 0, -bbMin.z);
+
+                invalidateGlModel(selectedObject);
+                for (int k = 0, l = flattenPlanes.size(); k < l; k++) {
+                    flattenPlanes.get(k).release();
+                }
+                flattenPlanes.clear();
+
+                selectedObject = -1;
+                SliceBeam.EVENT_BUS.fireEvent(new SelectedObjectChangedEvent());
+                return true;
+            }
+
+            return false;
+        }
+
         boolean render = j != selectedObject || j != -1;
         selectedObject = j == selectedObject ? -1 : j;
         if (render) {
+            if (isInFlattenMode) {
+                setInFlattenMode(false);
+            }
             if (selectedObject == -1) {
                 selX = selY = selZ = 0;
                 selRotX = selRotY = selRotZ = 0;
@@ -383,6 +487,44 @@ public class GLRenderer implements GLSurfaceView.Renderer {
             } else if (!glModel.isHovering && hovered) {
                 glModel.isHovering = true;
                 render = true;
+            }
+        }
+
+        if (isInFlattenMode) {
+            int minPlane = -1;
+            double minDistancePlane = Double.MAX_VALUE;
+
+            for (int i = 0, c = flattenPlanes.size(); i < c; i++) {
+                GLModel glModel = flattenPlanes.get(i);
+                glModel.getRaycaster().raycast(this, raycastHits, x, y);
+
+                double minDistanceRay = Double.MAX_VALUE;
+                if (!raycastHits.isEmpty()) {
+                    for (GLModel.HitResult res : raycastHits) {
+                        double distance = res.position.distance(camera.position);
+                        if (distance < minDistanceRay) {
+                            minDistanceRay = distance;
+                        }
+                    }
+                }
+                if (minDistanceRay < minDistancePlane) {
+                    minDistancePlane = minDistanceRay;
+                    minPlane = i;
+                }
+            }
+
+            if (minPlane != -1) {
+                for (int i = 0; i < flattenPlanes.size(); i++) {
+                    flattenPlanes.get(i).isHovering = i == minPlane;
+                }
+                render = true;
+            } else {
+                for (int i = 0; i < flattenPlanes.size(); i++) {
+                    if (flattenPlanes.get(i).isHovering) {
+                        flattenPlanes.get(i).isHovering = false;
+                        render = true;
+                    }
+                }
             }
         }
 
@@ -499,5 +641,11 @@ public class GLRenderer implements GLSurfaceView.Renderer {
             glModels.get(i).release();
         }
         glModels.clear();
+
+        isInFlattenMode = false;
+        for (int i = 0; i < flattenPlanes.size(); i++) {
+            flattenPlanes.get(i).release();
+        }
+        flattenPlanes.clear();
     }
 }

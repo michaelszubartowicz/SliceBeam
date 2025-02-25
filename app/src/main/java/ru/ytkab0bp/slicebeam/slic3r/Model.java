@@ -1,13 +1,15 @@
 package ru.ytkab0bp.slicebeam.slic3r;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import ru.ytkab0bp.slicebeam.utils.Vec3d;
 
 public class Model {
     public final String key = UUID.randomUUID().toString();
-    final long pointer;
+    long pointer;
 
     private double[] boundingExact;
     private double[] boundingApprox;
@@ -92,6 +94,10 @@ public class Model {
         Native.model_rotate(pointer, i, x, y, z);
     }
 
+    public void flattenRotate(int i, GLModel surface) {
+        Native.model_flatten_rotate(pointer, i, surface.pointer);
+    }
+
     public int getObjectsCount() {
         return Native.model_get_objects_count(pointer);
     }
@@ -128,12 +134,29 @@ public class Model {
         vec.set(tr[0], tr[1], tr[2]);
     }
 
+    public List<GLModel> createFlattenPlanes(int i) {
+        long[] ptr = Native.model_create_flatten_planes(pointer, i);
+        List<GLModel> list = new ArrayList<>(ptr.length);
+        for (long l : ptr) {
+            list.add(new GLModel(l));
+        }
+        return list;
+    }
+
     public GCodeProcessorResult slice(String configPath, String gcodePath, SliceListener listener) throws Slic3rRuntimeError {
         return new GCodeProcessorResult(Native.model_slice(pointer, configPath, gcodePath, listener));
     }
 
     public void release() {
-        Native.model_release(pointer);
+        if (pointer != 0) {
+            Native.model_release(pointer);
+            pointer = 0;
+        }
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        release();
     }
 
     public static Model merge(Model... models) {

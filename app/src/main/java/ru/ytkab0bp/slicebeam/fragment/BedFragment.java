@@ -37,6 +37,7 @@ import ru.ytkab0bp.slicebeam.components.bed_menu.OrientationMenu;
 import ru.ytkab0bp.slicebeam.components.bed_menu.SliceMenu;
 import ru.ytkab0bp.slicebeam.components.bed_menu.TransformMenu;
 import ru.ytkab0bp.slicebeam.config.ConfigObject;
+import ru.ytkab0bp.slicebeam.events.FlattenModeResetEvent;
 import ru.ytkab0bp.slicebeam.events.NeedSnackbarEvent;
 import ru.ytkab0bp.slicebeam.events.SlicingProgressEvent;
 import ru.ytkab0bp.slicebeam.navigation.Fragment;
@@ -398,6 +399,10 @@ public class BedFragment extends Fragment {
     }
 
     private void selectMenu(Context ctx, boolean portrait, int slot) {
+        if (glView.getRenderer().resetFlattenMode()) {
+            glView.requestRender();
+            SliceBeam.EVENT_BUS.fireEvent(new FlattenModeResetEvent());
+        }
         isAnimatingMenu = true;
 
         BedMenu prevMenu = menuMap.get(currentMenuSlot);

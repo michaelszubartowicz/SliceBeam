@@ -3,7 +3,7 @@ package ru.ytkab0bp.slicebeam.slic3r;
 import java.io.File;
 
 public class GCodeProcessorResult {
-    final long pointer;
+    long pointer;
 
     public GCodeProcessorResult(File f) {
         pointer = Native.gcoderesult_load_file(f.getAbsolutePath(), f.getName());
@@ -26,6 +26,14 @@ public class GCodeProcessorResult {
     }
 
     public void release() {
-        Native.gcoderesult_release(pointer);
+        if (pointer != 0) {
+            Native.gcoderesult_release(pointer);
+            pointer = 0;
+        }
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        release();
     }
 }

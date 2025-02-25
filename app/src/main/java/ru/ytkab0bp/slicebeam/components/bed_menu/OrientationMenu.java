@@ -28,6 +28,7 @@ import ru.ytkab0bp.slicebeam.R;
 import ru.ytkab0bp.slicebeam.SliceBeam;
 import ru.ytkab0bp.slicebeam.components.BeamAlertDialogBuilder;
 import ru.ytkab0bp.slicebeam.components.UnfoldMenu;
+import ru.ytkab0bp.slicebeam.events.FlattenModeResetEvent;
 import ru.ytkab0bp.slicebeam.events.NeedSnackbarEvent;
 import ru.ytkab0bp.slicebeam.events.ObjectsListChangedEvent;
 import ru.ytkab0bp.slicebeam.events.SelectedObjectChangedEvent;
@@ -52,12 +53,41 @@ public class OrientationMenu extends ListBedMenu {
         return Arrays.asList(
                 new BedMenuItem(R.string.MenuOrientationArrange, R.drawable.grid_layout_outline_28).onClick(v -> {
                     fragment.getGlView().arrange();
+                    fragment.getGlView().queueEvent(() -> {
+                        if (fragment.getGlView().getRenderer().invalidateFlattenMode()) {
+                            fragment.getGlView().requestRender();
+                        }
+                    });
                     SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(R.string.MenuOrientationArrangeFinished));
                 }).setEnabled(fragment.getGlView().getRenderer().getModel() != null),
                 new SpaceItem(portrait ? ViewUtils.dp(8) : 0, portrait ? 0 : ViewUtils.dp(8)),
-                new BedMenuItem(R.string.MenuOrientationPosition, R.drawable.menu_orientation_position_28).setEnabled(hasSelection()).onClick(v -> fragment.showUnfoldMenu(new PositionMenu(), v)),
-                new BedMenuItem(R.string.MenuOrientationRotation, R.drawable.menu_orientation_rotation_28).setEnabled(hasSelection()).onClick(v -> fragment.showUnfoldMenu(new RotationMenu(), v))
+                new BedMenuItem(R.string.MenuOrientationFlatten, R.drawable.menu_orientation_position_28).setEnabled(hasSelection()).setCheckable((buttonView, isChecked) -> {
+                    fragment.getGlView().getRenderer().setInFlattenMode(isChecked);
+                    fragment.getGlView().requestRender();
+                }, false),
+                new BedMenuItem(R.string.MenuOrientationPosition, R.drawable.menu_orientation_position_28).setEnabled(hasSelection()).onClick(v -> {
+                    if (fragment.getGlView().getRenderer().resetFlattenMode()) {
+                        fragment.getGlView().requestRender();
+                        ((BedMenuItem) adapter.getItems().get(2)).isChecked = false;
+                        adapter.notifyItemChanged(2);
+                    }
+                    fragment.showUnfoldMenu(new PositionMenu(), v);
+                }),
+                new BedMenuItem(R.string.MenuOrientationRotation, R.drawable.menu_orientation_rotation_28).setEnabled(hasSelection()).onClick(v -> {
+                    if (fragment.getGlView().getRenderer().resetFlattenMode()) {
+                        fragment.getGlView().requestRender();
+                        ((BedMenuItem) adapter.getItems().get(2)).isChecked = false;
+                        adapter.notifyItemChanged(2);
+                    }
+                    fragment.showUnfoldMenu(new RotationMenu(), v);
+                })
         );
+    }
+
+    @EventHandler(runOnMainThread = true)
+    public void onFlattenModeReset(FlattenModeResetEvent e) {
+        ((BedMenuItem) adapter.getItems().get(2)).isChecked = false;
+        adapter.notifyItemChanged(2);
     }
 
     @EventHandler(runOnMainThread = true)
@@ -65,18 +95,26 @@ public class OrientationMenu extends ListBedMenu {
         ((BedMenuItem) adapter.getItems().get(0)).setEnabled(fragment.getGlView().getRenderer().getModel() != null);
         adapter.notifyItemChanged(0);
 
-        ((BedMenuItem) adapter.getItems().get(2)).setEnabled(hasSelection());
-        adapter.notifyItemChanged(2);
-        ((BedMenuItem) adapter.getItems().get(3)).setEnabled(hasSelection());
-        adapter.notifyItemChanged(3);
+        for (int i = 2; i <= 4; i++) {
+            BedMenuItem item = (BedMenuItem) adapter.getItems().get(i);
+            item.setEnabled(hasSelection());
+            if (item.isCheckable) {
+                item.isChecked = false;
+            }
+            adapter.notifyItemChanged(i);
+        }
     }
 
     @EventHandler(runOnMainThread = true)
     public void onSelectionChanged(SelectedObjectChangedEvent e) {
-        ((BedMenuItem) adapter.getItems().get(2)).setEnabled(hasSelection());
-        adapter.notifyItemChanged(2);
-        ((BedMenuItem) adapter.getItems().get(3)).setEnabled(hasSelection());
-        adapter.notifyItemChanged(3);
+        for (int i = 2; i <= 4; i++) {
+            BedMenuItem item = (BedMenuItem) adapter.getItems().get(i);
+            item.setEnabled(hasSelection());
+            if (item.isCheckable) {
+                item.isChecked = false;
+            }
+            adapter.notifyItemChanged(i);
+        }
     }
 
     public final class PositionMenu extends UnfoldMenu {

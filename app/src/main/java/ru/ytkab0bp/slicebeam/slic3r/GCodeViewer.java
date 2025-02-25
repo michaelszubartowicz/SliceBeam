@@ -65,7 +65,7 @@ public class GCodeViewer {
         }
     };
 
-    private final long pointer;
+    private long pointer;
 
     public GCodeViewer() {
         pointer = Native.vgcode_create();
@@ -156,6 +156,14 @@ public class GCodeViewer {
     }
 
     public void release() {
-        Native.vgcode_release(pointer);
+        if (pointer != 0) {
+            Native.vgcode_release(pointer);
+            pointer = 0;
+        }
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        release();
     }
 }

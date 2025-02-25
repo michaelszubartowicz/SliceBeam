@@ -5,7 +5,6 @@ import static ru.ytkab0bp.slicebeam.utils.DebugUtils.assertTrue;
 import android.graphics.Color;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import ru.ytkab0bp.slicebeam.render.Camera;
 import ru.ytkab0bp.slicebeam.render.GLRenderer;
@@ -13,7 +12,7 @@ import ru.ytkab0bp.slicebeam.utils.Prefs;
 import ru.ytkab0bp.slicebeam.utils.Vec3d;
 
 public class GLModel {
-    private long pointer;
+    long pointer;
     private MeshRaycaster raycaster;
 
     public float hoverProgress;
@@ -74,7 +73,10 @@ public class GLModel {
     }
 
     public void release() {
-        Native.glmodel_release(pointer);
+        if (pointer != 0) {
+            Native.glmodel_release(pointer);
+            pointer = 0;
+        }
     }
 
     public MeshRaycaster getRaycaster() {
@@ -86,7 +88,7 @@ public class GLModel {
     }
 
     public final class MeshRaycaster {
-        public List<HitResult> raycast(GLRenderer renderer, ArrayList<HitResult> list, float x, float y) {
+        public void raycast(GLRenderer renderer, ArrayList<HitResult> list, float x, float y) {
             assertTrue(renderer != null);
             list.clear();
 
@@ -104,7 +106,6 @@ public class GLModel {
                         new Vec3d(v[i + 3], v[i + 4], v[i + 5])
                 ));
             }
-            return list;
         }
     }
 

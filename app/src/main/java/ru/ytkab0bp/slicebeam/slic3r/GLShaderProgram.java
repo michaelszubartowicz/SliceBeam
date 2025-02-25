@@ -17,7 +17,7 @@ import ru.ytkab0bp.slicebeam.SliceBeam;
 import ru.ytkab0bp.slicebeam.utils.IOUtils;
 
 public class GLShaderProgram {
-    final long pointer;
+    long pointer;
     private static ThreadLocal<FloatBuffer> matrixBuffer = new ThreadLocal<FloatBuffer>() {
         @Nullable
         @Override
@@ -140,6 +140,14 @@ public class GLShaderProgram {
     }
 
     public void release() {
-        Native.shader_release(pointer);
+        if (pointer != 0) {
+            Native.shader_release(pointer);
+            pointer = 0;
+        }
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        release();
     }
 }

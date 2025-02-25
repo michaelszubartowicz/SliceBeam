@@ -156,11 +156,19 @@ public class Bed3D {
     }
 
     public void release() {
-        Native.bed_release(pointer);
-        axes.release();
+        if (pointer != 0) {
+            Native.bed_release(pointer);
+            axes.release();
+            pointer = 0;
 
 //        triangles.release();
 //        gridlines.release();
 //        contourlines.release();
+        }
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        release();
     }
 }

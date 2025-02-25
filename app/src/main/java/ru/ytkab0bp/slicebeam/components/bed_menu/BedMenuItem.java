@@ -85,6 +85,7 @@ public class BedMenuItem extends SimpleRecyclerItem<BedMenuItem.BedMenuItemHolde
 
         private Path path = new Path();
         private float checkedProgress;
+        private boolean enabled;
 
         public BedMenuItemHolderView(Context context) {
             super(context);
@@ -117,7 +118,7 @@ public class BedMenuItem extends SimpleRecyclerItem<BedMenuItem.BedMenuItemHolde
             int rad = ViewUtils.dp(16);
             canvas.drawRoundRect(0, 0, getWidth(), getHeight(), rad, rad, bgPaint);
 
-            if (checkedProgress != 0f) {
+            if (enabled && checkedProgress != 0f) {
                 if (checkedProgress == 1f) {
                     canvas.drawRoundRect(0, 0, getWidth(), getHeight(), rad, rad, accentPaint);
                 } else {
@@ -144,6 +145,7 @@ public class BedMenuItem extends SimpleRecyclerItem<BedMenuItem.BedMenuItemHolde
         }
 
         public void bind(BedMenuItem item) {
+            enabled = item.isEnabled;
             title.setMaxLines(item.isSingleLine ? 1 : 2);
             title.setText(item.titleRes);
             icon.setImageResource(item.iconRes);
