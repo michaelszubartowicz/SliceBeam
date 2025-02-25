@@ -1,13 +1,16 @@
 package ru.ytkab0bp.slicebeam.fragment;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.os.Process;
+import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.SparseArray;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.WebView;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 
@@ -33,6 +36,7 @@ import ru.ytkab0bp.slicebeam.components.bed_menu.FileMenu;
 import ru.ytkab0bp.slicebeam.components.bed_menu.OrientationMenu;
 import ru.ytkab0bp.slicebeam.components.bed_menu.SliceMenu;
 import ru.ytkab0bp.slicebeam.components.bed_menu.TransformMenu;
+import ru.ytkab0bp.slicebeam.config.ConfigObject;
 import ru.ytkab0bp.slicebeam.events.NeedSnackbarEvent;
 import ru.ytkab0bp.slicebeam.events.SlicingProgressEvent;
 import ru.ytkab0bp.slicebeam.navigation.Fragment;
@@ -43,6 +47,7 @@ import ru.ytkab0bp.slicebeam.slic3r.Slic3rRuntimeError;
 import ru.ytkab0bp.slicebeam.theme.ThemesRepo;
 import ru.ytkab0bp.slicebeam.utils.Vec3d;
 import ru.ytkab0bp.slicebeam.utils.ViewUtils;
+import ru.ytkab0bp.slicebeam.view.BedSwipeDownLayout;
 import ru.ytkab0bp.slicebeam.view.DividerView;
 import ru.ytkab0bp.slicebeam.view.GLView;
 import ru.ytkab0bp.slicebeam.view.ThemeBottomNavigationView;
@@ -96,6 +101,9 @@ public class BedFragment extends Fragment {
     private Model model;
     private GCodeProcessorResult gCodeResult;
     private UnfoldMenu currentUnfoldMenu;
+
+    private BedSwipeDownLayout swipeDownLayout;
+    private WebView panelWebView;
 
     private static String tempFileName;
     private static File tempExportingFile;
@@ -158,6 +166,9 @@ public class BedFragment extends Fragment {
             currentUnfoldMenu.dismiss();
             return true;
         }
+        if (swipeDownLayout.onBackPressed()) {
+            return true;
+        }
         if (currentMenuSlot != 0) {
             navigationView.setSelectedItemId(0);
             return true;
@@ -191,6 +202,24 @@ public class BedFragment extends Fragment {
     public void onResume() {
         super.onResume();
         glView.onResume();
+        ConfigObject cfg = SliceBeam.CONFIG.findPrinter(SliceBeam.CONFIG.presets.get("printer"));
+        boolean enable = cfg != null && cfg.get("host_type") != null && !TextUtils.isEmpty(cfg.get("print_host"));
+        swipeDownLayout.setEnableTop(enable);
+        if (enable) {
+            String host = cfg.get("print_host");
+            if (host.contains(":")) {
+                try {
+                    int port = Integer.parseInt(host.split(":")[1]);
+                    if (port >= 7125 && port <= 7200) {
+                        host = host.split(":")[0];
+                    }
+                } catch (Exception ignored) {}
+            }
+            if (!host.startsWith("http://")) {
+                host = "http://" + host;
+            }
+            panelWebView.loadUrl(host);
+        }
     }
 
     @Override
@@ -199,6 +228,7 @@ public class BedFragment extends Fragment {
         glView.onPause();
     }
 
+    @SuppressLint("SetJavaScriptEnabled")
     @Override
     public View onCreateView(Context ctx) {
         glView = new GLView(ctx);
@@ -229,7 +259,23 @@ public class BedFragment extends Fragment {
             ll.addView(menuView, new LinearLayout.LayoutParams(ViewUtils.dp(MENU_SIZE_DP), ViewGroup.LayoutParams.MATCH_PARENT));
         }
 
-        ll.addView(glView, new LinearLayout.LayoutParams(portrait ? ViewGroup.LayoutParams.MATCH_PARENT : 0, portrait ? 0 : ViewGroup.LayoutParams.MATCH_PARENT, 1f));
+        swipeDownLayout = new BedSwipeDownLayout(ctx);
+        panelWebView = new WebView(ctx);
+        panelWebView.getSettings().setJavaScriptEnabled(true);
+
+        if (portrait) {
+            LinearLayout inner = new LinearLayout(ctx);
+            inner.setOrientation(LinearLayout.VERTICAL);
+            ll = inner;
+
+            inner.addView(glView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+            swipeDownLayout.addView(inner);
+            swipeDownLayout.addView(panelWebView);
+        } else {
+            swipeDownLayout.addView(glView);
+            swipeDownLayout.addView(panelWebView);
+            ll.addView(swipeDownLayout, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
+        }
 
         if (portrait) {
             ll.addView(menuView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(MENU_SIZE_DP)));
@@ -328,7 +374,11 @@ public class BedFragment extends Fragment {
             return true;
         });
 
-        overlayLayout.addView(contentView = ll);
+        if (portrait) {
+            overlayLayout.addView(contentView = swipeDownLayout);
+        } else {
+            overlayLayout.addView(contentView = ll);
+        }
         overlayLayout.addView(snackbarsLayout = new CoordinatorLayout(ctx), new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT) {{
             if (portrait) {
                 bottomMargin = ViewUtils.dp(80 * 2);
