@@ -86,6 +86,10 @@ public class Model {
         resetBoundingBox();
     }
 
+    public void ensureOnBed(int i) {
+        Native.model_ensure_on_bed(pointer, i);
+    }
+
     public void scale(int i, double x, double y, double z) {
         Native.model_scale(pointer, i, x, y, z);
     }

@@ -421,8 +421,7 @@ public class GLRenderer implements GLSurfaceView.Renderer {
             if (minPlane != -1) {
                 GLModel glModel = flattenPlanes.get(minPlane);
                 model.flattenRotate(selectedObject, glModel);
-                model.getBoundingBoxExact(j, bbMin, bbMax);
-                model.translate(j, 0, 0, -bbMin.z);
+                model.ensureOnBed(selectedObject);
 
                 invalidateGlModel(selectedObject);
                 for (int k = 0, l = flattenPlanes.size(); k < l; k++) {

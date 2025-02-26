@@ -66,6 +66,7 @@ class Native {
     static native boolean model_is_left_handed(long ptr, int i);
     static native void model_translate(long ptr, int i, double x, double y, double z);
     static native void model_translate_global(long ptr, double x, double y, double z);
+    static native void model_ensure_on_bed(long ptr, int i);
     static native void model_scale(long ptr, int i, double x, double y, double z);
     static native void model_rotate(long ptr, int i, double x, double y, double z);
     static native void model_flatten_rotate(long ptr, int i, long surfacePtr);

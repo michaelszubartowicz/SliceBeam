@@ -456,8 +456,7 @@ public class OrientationMenu extends ListBedMenu {
                 dz %= 360;
 
                 model.rotate(j, Math.toRadians(dx), Math.toRadians(dy), Math.toRadians(dz));
-                model.getBoundingBoxExact(j, bbMin, bbMax);
-                model.translate(j, 0, 0, -bbMin.z);
+                model.ensureOnBed(j);
 
                 fragment.getGlView().getRenderer().setSelectionRotation(0, 0, 0);
                 fragment.getGlView().getRenderer().invalidateGlModel(j);

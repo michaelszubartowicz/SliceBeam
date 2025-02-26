@@ -1237,6 +1237,8 @@ add_library(slic3r
 
         src/main/jni/libnest2d/src/libnest2d.cpp
 
+        src/main/jni/bbl/Orient.cpp
+
         src/main/jni/slicebeam/beam_native.cpp
         src/main/jni/slicebeam/GLModel.cpp
         src/main/jni/slicebeam/GLShader.cpp
