@@ -102,8 +102,6 @@ public class SetupActivity extends AppCompatActivity {
 
     private final static List<String> REPOS_URLS = Arrays.asList(
             "https://preset-repo-api.prusa3d.com/v1/repos",
-            // QIDI's manifest should be adapted, they haven't put their idx file
-//            "https://raw.githubusercontent.com/QIDITECH/QIDISlicer/refs/heads/master/resources/profiles/ArchiveRepositoryManifest.json",
             "https://raw.githubusercontent.com/utkabobr/SliceBeam/refs/heads/master/.profiledumpsrepo/manifest.json"
     );
 
