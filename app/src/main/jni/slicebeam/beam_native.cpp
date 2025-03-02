@@ -12,6 +12,7 @@
 #include "libslic3r/Arrange.hpp"
 #include "libslic3r/AABBMesh.hpp"
 #include "libslic3r/Geometry/ConvexHull.hpp"
+#include "bbl/Orient.hpp"
 #include "Viewer.hpp"
 
 #include "GLModel.hpp"
@@ -808,6 +809,12 @@ extern "C" {
         }
         m_planes.clear();
         return arr;
+    }
+
+    JNIEXPORT void JNICALL Java_ru_ytkab0bp_slicebeam_slic3r_Native_model_1auto_1orient(JNIEnv* env, jclass, jlong ptr, jint i) {
+        ModelRef* model = (ModelRef*) (intptr_t) ptr;
+        ModelObject* obj = model->model.objects[i];
+        orientation::orient(obj);
     }
 
     JNIEXPORT jlong JNICALL Java_ru_ytkab0bp_slicebeam_slic3r_Native_model_1slice(JNIEnv* env, jclass, jlong ptr, jstring configPath, jstring path, jobject listener) {

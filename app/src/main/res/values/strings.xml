@@ -53,6 +53,8 @@
     <string name="MenuOrientationArrange">Arrange models</string>
     <string name="MenuOrientationArrangeFinished">Models arranged.</string>
     <string name="MenuOrientationFlatten">Surface</string>
+    <string name="MenuOrientationAutoOrient">Auto\nOrient.</string>
+    <string name="MenuOrientationAutoOrientDone">Aligned automatically.</string>
     <string name="MenuOrientationPosition">Position</string>
     <string name="MenuOrientationPositionX">X</string>
     <string name="MenuOrientationPositionY">Y</string>

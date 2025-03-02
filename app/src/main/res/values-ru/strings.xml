@@ -51,6 +51,8 @@
     <string name="MenuOrientationArrange">Расст. модели</string>
     <string name="MenuOrientationArrangeFinished">Модели расставлены.</string>
     <string name="MenuOrientationFlatten">Поверхн.</string>
+    <string name="MenuOrientationAutoOrient">Автомат.\nОриент.</string>
+    <string name="MenuOrientationAutoOrientDone">Выровнено автоматически.</string>
     <string name="MenuOrientationPosition">Позиция</string>
     <string name="MenuOrientationPositionX">X</string>
     <string name="MenuOrientationPositionY">Y</string>

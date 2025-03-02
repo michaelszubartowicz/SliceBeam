@@ -22,6 +22,8 @@ add_compile_options(-fsigned-char)
 # Suppress all warnings
 add_definitions(-w)
 add_definitions(-DNDEBUG)
+add_definitions(-DSLIC3R_VERSION=${SLIC3R_VERSION})
+add_definitions(-DSLIC3R_BUILD_ID=${SLIC3R_BUILD_ID})
 
 set(jni_imports ${CMAKE_SOURCE_DIR}/src/main/jniImports)
 set(jni_libs ${CMAKE_SOURCE_DIR}/src/main/jniLibs)

@@ -19,6 +19,8 @@ import android.widget.TextView;
 
 import androidx.core.content.ContextCompat;
 
+import com.google.android.material.snackbar.Snackbar;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -61,6 +63,20 @@ public class OrientationMenu extends ListBedMenu {
                     SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(R.string.MenuOrientationArrangeFinished));
                 }).setEnabled(fragment.getGlView().getRenderer().getModel() != null),
                 new SpaceItem(portrait ? ViewUtils.dp(8) : 0, portrait ? 0 : ViewUtils.dp(8)),
+                new BedMenuItem(R.string.MenuOrientationAutoOrient, R.drawable.menu_orientation_auto_28).setEnabled(hasSelection()).onClick(view -> {
+                    if (fragment.getGlView().getRenderer().resetFlattenMode()) {
+                        fragment.getGlView().requestRender();
+                        ((BedMenuItem) adapter.getItems().get(3)).isChecked = false;
+                        adapter.notifyItemChanged(3);
+                    }
+
+                    int i = fragment.getGlView().getRenderer().getSelectedObject();
+                    fragment.getGlView().getRenderer().getModel().autoOrient(i);
+                    fragment.getGlView().getRenderer().invalidateGlModel(i);
+                    fragment.getGlView().requestRender();
+
+                    SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(R.string.MenuOrientationAutoOrientDone, Snackbar.LENGTH_SHORT));
+                }),
                 new BedMenuItem(R.string.MenuOrientationFlatten, R.drawable.menu_orientation_flatten_28).setEnabled(hasSelection()).setCheckable((buttonView, isChecked) -> {
                     fragment.getGlView().getRenderer().setInFlattenMode(isChecked);
                     fragment.getGlView().requestRender();
@@ -68,16 +84,16 @@ public class OrientationMenu extends ListBedMenu {
                 new BedMenuItem(R.string.MenuOrientationPosition, R.drawable.menu_orientation_position_28).setEnabled(hasSelection()).onClick(v -> {
                     if (fragment.getGlView().getRenderer().resetFlattenMode()) {
                         fragment.getGlView().requestRender();
-                        ((BedMenuItem) adapter.getItems().get(2)).isChecked = false;
-                        adapter.notifyItemChanged(2);
+                        ((BedMenuItem) adapter.getItems().get(3)).isChecked = false;
+                        adapter.notifyItemChanged(3);
                     }
                     fragment.showUnfoldMenu(new PositionMenu(), v);
                 }),
                 new BedMenuItem(R.string.MenuOrientationRotation, R.drawable.menu_orientation_rotation_28).setEnabled(hasSelection()).onClick(v -> {
                     if (fragment.getGlView().getRenderer().resetFlattenMode()) {
                         fragment.getGlView().requestRender();
-                        ((BedMenuItem) adapter.getItems().get(2)).isChecked = false;
-                        adapter.notifyItemChanged(2);
+                        ((BedMenuItem) adapter.getItems().get(3)).isChecked = false;
+                        adapter.notifyItemChanged(3);
                     }
                     fragment.showUnfoldMenu(new RotationMenu(), v);
                 })
@@ -86,8 +102,8 @@ public class OrientationMenu extends ListBedMenu {
 
     @EventHandler(runOnMainThread = true)
     public void onFlattenModeReset(FlattenModeResetEvent e) {
-        ((BedMenuItem) adapter.getItems().get(2)).isChecked = false;
-        adapter.notifyItemChanged(2);
+        ((BedMenuItem) adapter.getItems().get(3)).isChecked = false;
+        adapter.notifyItemChanged(3);
     }
 
     @EventHandler(runOnMainThread = true)
@@ -95,7 +111,7 @@ public class OrientationMenu extends ListBedMenu {
         ((BedMenuItem) adapter.getItems().get(0)).setEnabled(fragment.getGlView().getRenderer().getModel() != null);
         adapter.notifyItemChanged(0);
 
-        for (int i = 2; i <= 4; i++) {
+        for (int i = 2; i <= 5; i++) {
             BedMenuItem item = (BedMenuItem) adapter.getItems().get(i);
             item.setEnabled(hasSelection());
             if (item.isCheckable) {
@@ -107,7 +123,7 @@ public class OrientationMenu extends ListBedMenu {
 
     @EventHandler(runOnMainThread = true)
     public void onSelectionChanged(SelectedObjectChangedEvent e) {
-        for (int i = 2; i <= 4; i++) {
+        for (int i = 2; i <= 5; i++) {
             BedMenuItem item = (BedMenuItem) adapter.getItems().get(i);
             item.setEnabled(hasSelection());
             if (item.isCheckable) {

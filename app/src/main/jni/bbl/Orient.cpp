@@ -5,6 +5,7 @@
 #include <boost/geometry/index/rtree.hpp>
 #include <tbb/parallel_for.h>
 #include "bbl_utils.hpp"
+#include "libslic3r/AABBMesh.hpp"
 
 #if defined(_MSC_VER) && defined(__clang__)
 #define BOOST_NO_CXX17_HDR_STRING_VIEW
@@ -196,7 +197,61 @@ namespace Slic3r {
                 return best_orientation.cast<double>();
             }
 
+            #define BBOX_OFFSET 2.0
+
             void preprocess() {
+                float m_sample_interval = 0.5;
+                AABBMesh indexed_mesh(mesh->its, true);
+                BoundingBoxf3 bbox = mesh->bounding_box();
+                bbox.offset(BBOX_OFFSET);
+
+                std::vector<FaceProperty> properties(mesh->its.indices.size());
+                std::unordered_set<size_t> hit_face_indices;
+
+                // x-axis rays
+                for (double y = bbox.min.y(); y < bbox.max.y(); y += m_sample_interval) {
+                    for (double z = bbox.min.z(); z < bbox.max.z(); z += m_sample_interval) {
+                        auto hit_result = indexed_mesh.query_ray_hit({ bbox.min.x(), y, z }, { 1.0, 0.0, 0.0 });
+                        if (hit_result.is_hit())
+                            hit_face_indices.insert(hit_result.face());
+
+                        hit_result = indexed_mesh.query_ray_hit({ bbox.max.x(), y, z }, { -1.0, 0.0, 0.0 });
+                        if (hit_result.is_hit())
+                            hit_face_indices.insert(hit_result.face());
+                    }
+                }
+
+                // y-axis rays
+                for (double x = bbox.min.x(); x < bbox.max.x(); x += m_sample_interval) {
+                    for (double z = bbox.min.z(); z < bbox.max.z(); z += m_sample_interval) {
+                        auto hit_result = indexed_mesh.query_ray_hit({ x, bbox.min.y(), z }, { 0.0, 1.0, 0.0 });
+                        if (hit_result.is_hit())
+                            hit_face_indices.insert(hit_result.face());
+
+                        hit_result = indexed_mesh.query_ray_hit({ x, bbox.max.y(), z }, { 0.0, -1.0, 0.0 });
+                        if (hit_result.is_hit())
+                            hit_face_indices.insert(hit_result.face());
+                    }
+                }
+
+                // z-axis rays
+                for (double x = bbox.min.x(); x < bbox.max.x(); x += m_sample_interval) {
+                    for (double y = bbox.min.y(); y < bbox.max.y(); y += m_sample_interval) {
+                        auto hit_result = indexed_mesh.query_ray_hit({ x, y, bbox.min.z() }, { 0.0, 0.0, 1.0 });
+                        if (hit_result.is_hit())
+                            hit_face_indices.insert(hit_result.face());
+
+                        hit_result = indexed_mesh.query_ray_hit({ x, y, bbox.max.z() }, { 0.0, 0.0, -1.0 });
+                        if (hit_result.is_hit())
+                            hit_face_indices.insert(hit_result.face());
+                    }
+                }
+
+                for (size_t facet_idx : hit_face_indices) {
+                    uint32_t vol_facet_idx = facet_idx;
+                    properties[vol_facet_idx].type = EnumFaceTypes::eExteriorAppearance;
+                }
+
                 int count_apperance = 0;
                 {
                     int face_count = mesh->facets_count();
@@ -211,7 +266,7 @@ namespace Slic3r {
                         normals.row(i) = face_normals[i];
                         normals_quantize.row(i) = quantize_vec3f(face_normals[i]);
                         areas(i) = area;
-                        // TODO: Fix this // is_apperance(i) = (its.get_property(i).type == EnumFaceTypes::eExteriorAppearance);
+                        is_apperance(i) = (properties[i].type == EnumFaceTypes::eExteriorAppearance);
                         count_apperance += (is_apperance(i) == 1);
                     }
                 }
@@ -585,12 +640,17 @@ namespace Slic3r {
             auto m = obj->mesh();
             AutoOrienter orienter(&m);
             Vec3d orientation = orienter.process();
-            Vec3d axis;
-            double angle;
-            Geometry::rotation_from_two_vectors(orientation, {0, 0, 1}, axis, angle, nullptr);
-
-            obj->rotate(angle, axis);
-            obj->ensure_on_bed();
+            orientation *= -1;
+            ModelVolumePtrs ptrs = obj->volumes;
+            for (int i = 0, c = ptrs.size(); i < c; i++) {
+                auto vol = ptrs[i];
+                const Geometry::Transformation& old_transform = vol->get_transformation();
+                const Vec3d tnormal = orientation;
+                const Transform3d rotation_matrix = Transform3d(Eigen::Quaterniond().setFromTwoVectors(tnormal, -Vec3d::UnitZ()));
+                vol->set_transformation(old_transform.get_offset_matrix() * rotation_matrix * old_transform.get_matrix_no_offset());
+            }
+            obj->invalidate_bounding_box();
+            obj->ensure_on_bed(false);
         }
 
         void orient(ModelInstance *instance) {

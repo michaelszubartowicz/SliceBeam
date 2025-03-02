@@ -147,6 +147,10 @@ public class Model {
         return list;
     }
 
+    public void autoOrient(int i) {
+        Native.model_auto_orient(pointer, i);
+    }
+
     public GCodeProcessorResult slice(String configPath, String gcodePath, SliceListener listener) throws Slic3rRuntimeError {
         return new GCodeProcessorResult(Native.model_slice(pointer, configPath, gcodePath, listener));
     }

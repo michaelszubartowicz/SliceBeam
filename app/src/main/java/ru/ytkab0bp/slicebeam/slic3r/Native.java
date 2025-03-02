@@ -71,6 +71,7 @@ class Native {
     static native void model_rotate(long ptr, int i, double x, double y, double z);
     static native void model_flatten_rotate(long ptr, int i, long surfacePtr);
     static native long[] model_create_flatten_planes(long ptr, int i);
+    static native void model_auto_orient(long ptr, int i);
     static native long model_slice(long ptr, String configPath, String path, SliceListener listener) throws Slic3rRuntimeError;
     static native void model_release(long ptr);
 
