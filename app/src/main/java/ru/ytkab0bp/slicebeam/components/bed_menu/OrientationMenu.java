@@ -61,7 +61,7 @@ public class OrientationMenu extends ListBedMenu {
                     SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(R.string.MenuOrientationArrangeFinished));
                 }).setEnabled(fragment.getGlView().getRenderer().getModel() != null),
                 new SpaceItem(portrait ? ViewUtils.dp(8) : 0, portrait ? 0 : ViewUtils.dp(8)),
-                new BedMenuItem(R.string.MenuOrientationFlatten, R.drawable.menu_orientation_position_28).setEnabled(hasSelection()).setCheckable((buttonView, isChecked) -> {
+                new BedMenuItem(R.string.MenuOrientationFlatten, R.drawable.menu_orientation_flatten_28).setEnabled(hasSelection()).setCheckable((buttonView, isChecked) -> {
                     fragment.getGlView().getRenderer().setInFlattenMode(isChecked);
                     fragment.getGlView().requestRender();
                 }, false),

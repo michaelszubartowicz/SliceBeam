@@ -20,7 +20,9 @@ android {
         externalNativeBuild {
             cmake {
                 arguments '-DANDROID_STL=c++_shared', '-DANDROID_PLATFORM=21',
-                        '-DCMAKE_BUILD_TYPE=Release' // Disabling this results in drastically degradation of slicing times on debug builds
+                        '-DCMAKE_BUILD_TYPE=Release', // Disabling this results in drastically degradation of slicing times on debug builds
+                        "-DSLIC3R_VERSION=${defaultConfig.versionName}",
+                        "-DSLIC3R_BUILD_ID=${defaultConfig.versionCode}"
             }
         }
     }
