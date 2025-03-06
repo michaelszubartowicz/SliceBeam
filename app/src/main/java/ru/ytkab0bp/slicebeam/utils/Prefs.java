@@ -27,6 +27,14 @@ public class Prefs {
         mPrefs.edit().putString("last_commit", BuildConfig.COMMIT).apply();
     }
 
+    public static boolean isScaleInputInMM() {
+        return mPrefs.getBoolean("scale_input_mm", false);
+    }
+
+    public static void setScaleInputInMM(boolean v) {
+        mPrefs.edit().putBoolean("scale_input_mm", true).apply();
+    }
+
     public static boolean isScaleLinked() {
         return mPrefs.getBoolean("scale_linked", true);
     }

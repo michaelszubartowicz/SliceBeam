@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import ru.ytkab0bp.eventbus.EventHandler;
 import ru.ytkab0bp.slicebeam.R;
@@ -152,17 +153,20 @@ public class TransformMenu extends ListBedMenu {
             if (j == -1) return;
             startedScrollObject = j;
 
+            Model model = fragment.getGlView().getRenderer().getModel();
+            model.getScale(j, tempVec);
+            double scaleX = tempVec.x, scaleY = tempVec.y, scaleZ = tempVec.z;
+            model.getBoundingBoxExact(j, tempVec, tempVec2);
+
             if (x != null) {
-                xTitle.setText(formatTrackTitle(R.string.MenuTransformScaleXValue, x * 100));
+                xTitle.setText(formatTrackTitle(R.string.MenuTransformScaleXValue, x * 100, (tempVec2.x - tempVec.x) / scaleX * x));
             }
             if (y != null) {
-                yTitle.setText(formatTrackTitle(R.string.MenuTransformScaleYValue, y * 100));
+                yTitle.setText(formatTrackTitle(R.string.MenuTransformScaleYValue, y * 100, (tempVec2.y - tempVec.y) / scaleY * y));
             }
             if (z != null) {
-                zTitle.setText(formatTrackTitle(R.string.MenuTransformScaleZValue, z * 100));
+                zTitle.setText(formatTrackTitle(R.string.MenuTransformScaleZValue, z * 100, (tempVec2.z - tempVec.z) / scaleZ * z));
             }
-
-            Model model = fragment.getGlView().getRenderer().getModel();
 
             model.getRotation(j, tempVec);
             DoubleMatrix.setIdentityM(tempMatrix, 0);
@@ -197,19 +201,22 @@ public class TransformMenu extends ListBedMenu {
 
             fragment.getGlView().queueEvent(() -> {
                 Model model = fragment.getGlView().getRenderer().getModel();
+                model.getScale(j, tempVec);
+                double scaleX = tempVec.x, scaleY = tempVec.y, scaleZ = tempVec.z;
+                model.getBoundingBoxExact(j, tempVec, tempVec2);
 
                 double dx = 1f, dy = 1f, dz = 1f;
                 if (x != null) {
                     dx = x;
-                    xTitle.setText(formatTrackTitle(R.string.MenuTransformScaleXValue, x * 100));
+                    xTitle.setText(formatTrackTitle(R.string.MenuTransformScaleXValue, x * 100, (tempVec2.x - tempVec.x) / scaleX * x));
                 }
                 if (y != null) {
                     dy = y;
-                    yTitle.setText(formatTrackTitle(R.string.MenuTransformScaleYValue, y * 100));
+                    yTitle.setText(formatTrackTitle(R.string.MenuTransformScaleYValue, y * 100, (tempVec2.y - tempVec.y) / scaleY * y));
                 }
                 if (z != null) {
                     dz = z;
-                    zTitle.setText(formatTrackTitle(R.string.MenuTransformScaleZValue, z * 100));
+                    zTitle.setText(formatTrackTitle(R.string.MenuTransformScaleZValue, z * 100, (tempVec2.z - tempVec.z) / scaleZ * z));
                 }
 
                 model.getRotation(j, tempVec);
@@ -233,9 +240,7 @@ public class TransformMenu extends ListBedMenu {
 
                 model.getScale(j, tempVec);
                 model.scale(j, dx, dy, dz);
-
-                model.getBoundingBoxExact(j, tempVec, tempVec2);
-                model.translate(j, 0, 0, -tempVec.z);
+                model.ensureOnBed(j);
 
                 fragment.getGlView().getRenderer().invalidateSelectionObject();
                 fragment.getGlView().getRenderer().setSelectionScale(1, 1, 1);
@@ -245,8 +250,8 @@ public class TransformMenu extends ListBedMenu {
             fragment.getGlView().requestRender();
         }
 
-        private CharSequence formatTrackTitle(int res, double value) {
-            SpannableStringBuilder sb = SpannableStringBuilder.valueOf(SliceBeam.INSTANCE.getString(res, value));
+        private CharSequence formatTrackTitle(int res, double value, double mm) {
+            SpannableStringBuilder sb = SpannableStringBuilder.valueOf(SliceBeam.INSTANCE.getString(res, value, mm));
             sb.append(" d");
             int size = ViewUtils.dp(14);
             Drawable dr = ContextCompat.getDrawable(SliceBeam.INSTANCE, R.drawable.edit_outline_28);
@@ -263,33 +268,108 @@ public class TransformMenu extends ListBedMenu {
             Model model = fragment.getGlView().getRenderer().getModel();
             model.getScale(j, tempVec);
 
-            double current;
+            Context ctx = getView().getContext();
+            LinearLayout ll = new LinearLayout(ctx);
+            ll.setOrientation(LinearLayout.VERTICAL);
+
+            AtomicBoolean inputInMM = new AtomicBoolean(Prefs.isScaleInputInMM());
+
+            double cur;
             if (x) {
-                current = tempVec.x * 100;
+                cur = tempVec.x * 100;
             } else if (y) {
-                current = tempVec.y * 100;
+                cur = tempVec.y * 100;
             } else {
-                current = tempVec.z * 100;
+                cur = tempVec.z * 100;
             }
 
-            Context ctx = getView().getContext();
-            FrameLayout fl = new FrameLayout(ctx);
+            model.getScale(j, tempVec);
+            double scaleX = tempVec.x, scaleY = tempVec.y, scaleZ = tempVec.z;
+            model.getBoundingBoxExact(j, tempVec, tempVec2);
+            if (inputInMM.get()) {
+                cur /= 100.0;
+
+                if (x) {
+                    cur *= (tempVec2.x - tempVec.x) / scaleX;
+                } else if (y) {
+                    cur *= (tempVec2.y - tempVec.y) / scaleY;
+                } else {
+                    cur *= (tempVec2.z - tempVec.z) / scaleZ;
+                }
+            }
+            double current = cur;
+
             EditText text = new EditText(ctx);
             text.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
             text.setText(String.format(Locale.ROOT, "%.2f", current));
             text.setTextColor(ThemesRepo.getColor(android.R.attr.textColorPrimary));
-            fl.addView(text, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT) {{
+            ll.addView(text, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT) {{
                 leftMargin = rightMargin = ViewUtils.dp(21);
+            }});
+
+            PreferenceSwitchItem.SwitchPreferenceHolderView holderView = new PreferenceSwitchItem.SwitchPreferenceHolderView(ctx);
+            holderView.title.setText(R.string.MenuTransformScaleMM);
+            holderView.title.setTypeface(ViewUtils.getTypeface(ViewUtils.ROBOTO_MEDIUM));
+            holderView.matSwitch.setChecked(inputInMM.get());
+            holderView.subtitle.setVisibility(View.GONE);
+            holderView.setOnClickListener(v -> {
+                inputInMM.set(!inputInMM.get());
+
+                double value;
+                try {
+                    value = Double.parseDouble(text.getText().toString());
+                } catch (NumberFormatException e) {
+                    value = current;
+                }
+
+                if (inputInMM.get()) {
+                    value /= 100.0;
+
+                    if (x) {
+                        value *= (tempVec2.x - tempVec.x) / scaleX;
+                    } else if (y) {
+                        value *= (tempVec2.y - tempVec.y) / scaleY;
+                    } else {
+                        value *= (tempVec2.z - tempVec.z) / scaleZ;
+                    }
+                } else {
+                    if (x) {
+                        value /= (tempVec2.x - tempVec.x) / scaleX;
+                    } else if (y) {
+                        value /= (tempVec2.y - tempVec.y) / scaleY;
+                    } else {
+                        value /= (tempVec2.z - tempVec.z) / scaleZ;
+                    }
+                    value *= 100.0;
+                }
+                text.setText(String.format(Locale.ROOT, "%.2f", value));
+                holderView.matSwitch.setChecked(inputInMM.get());
+                Prefs.setScaleInputInMM(inputInMM.get());
+            });
+            ll.addView(holderView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT) {{
+                leftMargin = rightMargin = ViewUtils.dp(8);
             }});
 
             new BeamAlertDialogBuilder(ctx)
                     .setTitle(title)
-                    .setView(fl)
+                    .setView(ll)
                     .setNegativeButton(android.R.string.cancel, null)
                     .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                         double value;
                         try {
-                            value = Double.parseDouble(text.getText().toString()) / 100.0;
+                            value = Double.parseDouble(text.getText().toString());
+
+                            if (inputInMM.get()) {
+                                if (x) {
+                                    value /= (tempVec2.x - tempVec.x) / scaleX;
+                                } else if (y) {
+                                    value /= (tempVec2.y - tempVec.y) / scaleY;
+                                } else {
+                                    value /= (tempVec2.z - tempVec.z) / scaleZ;
+                                }
+                            } else {
+                                value /= 100.0;
+                            }
                         } catch (NumberFormatException e) {
                             value = current;
                         }
@@ -449,14 +529,16 @@ public class TransformMenu extends ListBedMenu {
 
             Model model = fragment.getGlView().getRenderer().getModel();
             model.getScale(j, tempVec);
+            double scaleX = tempVec.x, scaleY = tempVec.y, scaleZ = tempVec.z;
 
-            xTrack.setCurrentPosition((int) Math.round(tempVec.x * 100));
-            yTrack.setCurrentPosition((int) Math.round(tempVec.y * 100));
-            zTrack.setCurrentPosition((int) Math.round(tempVec.z * 100));
+            xTrack.setCurrentPosition((int) Math.round(scaleX * 100));
+            yTrack.setCurrentPosition((int) Math.round(scaleY * 100));
+            zTrack.setCurrentPosition((int) Math.round(scaleZ * 100));
 
-            xTitle.setText(formatTrackTitle(R.string.MenuTransformScaleXValue, tempVec.x * 100));
-            yTitle.setText(formatTrackTitle(R.string.MenuTransformScaleYValue, tempVec.y * 100));
-            zTitle.setText(formatTrackTitle(R.string.MenuTransformScaleZValue, tempVec.z * 100));
+            model.getBoundingBoxExact(j, tempVec, tempVec2);
+            xTitle.setText(formatTrackTitle(R.string.MenuTransformScaleXValue, scaleX * 100, (tempVec2.x - tempVec.x)));
+            yTitle.setText(formatTrackTitle(R.string.MenuTransformScaleYValue, scaleY * 100, (tempVec2.y - tempVec.y)));
+            zTitle.setText(formatTrackTitle(R.string.MenuTransformScaleZValue, scaleZ * 100, (tempVec2.z - tempVec.z)));
 
             xTrack.updateSyncDeltas();
             yTrack.updateSyncDeltas();

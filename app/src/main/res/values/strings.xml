@@ -74,9 +74,10 @@
     <string name="MenuTransform">Transform</string>
     <string name="MenuTransformScale">Scale</string>
     <string name="MenuTransformScaleLink">Save aspect ratio</string>
-    <string name="MenuTransformScaleXValue">X = %.2f %%</string>
-    <string name="MenuTransformScaleYValue">Y = %.2f %%</string>
-    <string name="MenuTransformScaleZValue">Z = %.2f %%</string>
+    <string name="MenuTransformScaleXValue">X = %.2f %% | %.2f mm</string>
+    <string name="MenuTransformScaleYValue">Y = %.2f %% | %.2f mm</string>
+    <string name="MenuTransformScaleZValue">Z = %.2f %% | %.2f mm</string>
+    <string name="MenuTransformScaleMM">Input in mm</string>
     <string name="MenuTransformMirror">Mirror</string>
     <string name="MenuTransformMirrorX">Mirror X</string>
     <string name="MenuTransformMirrorY">Mirror Y</string>
