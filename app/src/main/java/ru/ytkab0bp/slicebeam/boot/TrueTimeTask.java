@@ -5,12 +5,11 @@ import com.instacart.library.truetime.TrueTime;
 import java.io.IOException;
 
 public class TrueTimeTask extends BootTask {
-    /** @noinspection BusyWait*/
     public TrueTimeTask() {
         super(() -> {
-            while (true) {
+            for (int i = 0; i < 2; i++) {
                 try {
-                    TrueTime.build().withNtpHost("0.ru.pool.ntp.org").initialize();
+                    TrueTime.build().withNtpHost("1.ru.pool.ntp.org").initialize();
                     break;
                 } catch (IOException ignore) {
                     try {

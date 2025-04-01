@@ -40,6 +40,12 @@ public class AppBoot {
                 }
             }
             Log.d("boot", "Boot in " + (System.currentTimeMillis() - start) + "ms");
+            executor.shutdown();
+            executor = null;
+            pendingMain = null;
+            pendingTasks = null;
+            completed = null;
+            latch = null;
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
