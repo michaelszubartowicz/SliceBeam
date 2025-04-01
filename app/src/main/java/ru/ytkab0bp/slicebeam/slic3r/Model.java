@@ -147,8 +147,20 @@ public class Model {
         return list;
     }
 
+    public int getExtruder(int i) {
+        return Native.model_get_extruder(pointer, i);
+    }
+
+    public void setExtruder(int i, int extruder) {
+        Native.model_set_extruder(pointer, i, extruder);
+    }
+
     public void autoOrient(int i) {
         Native.model_auto_orient(pointer, i);
+    }
+
+    public boolean isBigObject(int i) {
+        return Native.model_is_big_object(pointer, i);
     }
 
     public GCodeProcessorResult slice(String configPath, String gcodePath, SliceListener listener) throws Slic3rRuntimeError {

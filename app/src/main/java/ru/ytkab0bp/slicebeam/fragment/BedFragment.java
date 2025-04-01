@@ -14,13 +14,11 @@ import android.webkit.WebView;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 
-import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.dynamicanimation.animation.FloatValueHolder;
 import androidx.dynamicanimation.animation.SpringAnimation;
 import androidx.dynamicanimation.animation.SpringForce;
 
 import com.google.android.material.navigation.NavigationBarView;
-import com.google.android.material.snackbar.Snackbar;
 
 import java.io.File;
 
@@ -38,6 +36,7 @@ import ru.ytkab0bp.slicebeam.components.bed_menu.SliceMenu;
 import ru.ytkab0bp.slicebeam.components.bed_menu.TransformMenu;
 import ru.ytkab0bp.slicebeam.config.ConfigObject;
 import ru.ytkab0bp.slicebeam.events.FlattenModeResetEvent;
+import ru.ytkab0bp.slicebeam.events.NeedDismissSnackbarEvent;
 import ru.ytkab0bp.slicebeam.events.NeedSnackbarEvent;
 import ru.ytkab0bp.slicebeam.events.SlicingProgressEvent;
 import ru.ytkab0bp.slicebeam.navigation.Fragment;
@@ -51,6 +50,7 @@ import ru.ytkab0bp.slicebeam.utils.ViewUtils;
 import ru.ytkab0bp.slicebeam.view.BedSwipeDownLayout;
 import ru.ytkab0bp.slicebeam.view.DividerView;
 import ru.ytkab0bp.slicebeam.view.GLView;
+import ru.ytkab0bp.slicebeam.view.SnackbarsLayout;
 import ru.ytkab0bp.slicebeam.view.ThemeBottomNavigationView;
 import ru.ytkab0bp.slicebeam.view.ThemeRailNavigationView;
 
@@ -59,7 +59,7 @@ public class BedFragment extends Fragment {
     private final static int MENU_SIZE_DP = 80;
 
     private FrameLayout overlayLayout;
-    private CoordinatorLayout snackbarsLayout;
+    private SnackbarsLayout snackbarsLayout;
     private GLView glView;
     private NavigationBarView navigationView;
 
@@ -126,7 +126,16 @@ public class BedFragment extends Fragment {
 
     @EventHandler(runOnMainThread = true)
     public void onNeedSnackbar(NeedSnackbarEvent e) {
-        Snackbar.make(snackbarsLayout, e.title, Snackbar.LENGTH_SHORT).show();
+        SnackbarsLayout.Snackbar s = new SnackbarsLayout.Snackbar(e.type, e.title);
+        if (e.tag != null) {
+            s.tag(e.tag);
+        }
+        snackbarsLayout.show(s);
+    }
+
+    @EventHandler(runOnMainThread = true)
+    public void onDismissSnackbar(NeedDismissSnackbarEvent e) {
+        snackbarsLayout.dismiss(e.tag);
     }
 
     public void showUnfoldMenu(UnfoldMenu menu, View from) {
@@ -380,7 +389,7 @@ public class BedFragment extends Fragment {
         } else {
             overlayLayout.addView(contentView = ll);
         }
-        overlayLayout.addView(snackbarsLayout = new CoordinatorLayout(ctx), new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT) {{
+        overlayLayout.addView(snackbarsLayout = new SnackbarsLayout(ctx), new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT) {{
             if (portrait) {
                 bottomMargin = ViewUtils.dp(80 * 2);
             } else {
@@ -390,7 +399,7 @@ public class BedFragment extends Fragment {
         return overlayLayout;
     }
 
-    public CoordinatorLayout getSnackbarsLayout() {
+    public SnackbarsLayout getSnackbarsLayout() {
         return snackbarsLayout;
     }
 
@@ -498,7 +507,6 @@ public class BedFragment extends Fragment {
                 }
             });
         } else {
-            glView.getRenderer().setModel(model = m);
             glView.queueEvent(new Runnable() {
                 @Override
                 public void run() {
@@ -507,6 +515,8 @@ public class BedFragment extends Fragment {
                         ViewUtils.postOnMainThread(()-> glView.queueEvent(this));
                         return;
                     }
+                    glView.getRenderer().setModel(model = m);
+
                     Vec3d center = bed.getVolumeMin().center(bed.getVolumeMax());
                     Vec3d objMin = new Vec3d(), objMax = new Vec3d();
                     Vec3d objTranslate = new Vec3d();

@@ -15,10 +15,15 @@ import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import ru.ytkab0bp.slicebeam.config.ConfigObject;
 
 public class IOUtils {
+    public static ExecutorService IO_POOL = Executors.newCachedThreadPool();
+
     public static String readString(InputStream in) throws IOException {
         return readString(in, false);
     }

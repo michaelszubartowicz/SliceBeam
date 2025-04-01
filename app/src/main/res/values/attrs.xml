@@ -34,4 +34,9 @@
     <attr name="yTrackColor" format="reference|color"/>
     <attr name="zTrackColor" format="reference|color"/>
     <attr name="textColorNegative" format="reference|color"/>
+    <attr name="snackbarBase" format="reference|color"/>
+    <attr name="snackbarDone" format="reference|color"/>
+    <attr name="snackbarWarning" format="reference|color"/>
+    <attr name="snackbarInfo" format="reference|color"/>
+    <attr name="snackbarError" format="reference|color"/>
 </resources>

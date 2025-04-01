@@ -1,5 +1,4 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
     <style name="Base.Theme.SliceBeam" parent="Theme.Material3.Light.NoActionBar">
         <item name="android:windowBackground">#FFF</item>
         <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="s">@drawable/icon_adaptive_foreground</item>

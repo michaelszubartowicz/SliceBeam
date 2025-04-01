@@ -10,8 +10,11 @@
     <string name="SlotAppSettingsTooltip">Настройки приложения</string>
     <string name="MenuFile">Файл</string>
     <string name="MenuFileOpen">Открыть модель</string>
+    <string name="MenuFileOpenFileLoaded">Файл загружен.</string>
     <string name="MenuFileOpenFileFailed">Не удалось открыть модель</string>
     <string name="MenuFileOpenFileFailedNullName">Не удалось определить имя файла.</string>
+    <string name="MenuFileOpenFileBigObject">Файл содержит более 100к треугольников. Нарезка может быть очень медленной.</string>
+    <string name="MenuFileOpenFileLoading">Загрузка файла…</string>
     <string name="MenuFileDelete">Убрать модель</string>
     <string name="MenuFileCalibrations">Калибров.</string>
     <string name="MenuFileCalibrationsLA">K3D Linear Advance</string>
@@ -28,7 +31,6 @@
     <string name="MenuFileCalibrationsModelsCylinder">Цилиндр</string>
     <string name="MenuFileCalibrationsModelsPyramid">Пирамида</string>
     <string name="MenuFileCalibrationsModelsSphere">Сфера</string>
-    <string name="MenuFileOpenFileLoaded">Файл загружен.</string>
     <string name="MenuFileImportProfiles">Импорт. профилей</string>
     <string name="MenuFileImportProfilesFailed">Не удалось импортировать</string>
     <string name="MenuFileImportProfilesFailedNotIni">Не файл .ini</string>

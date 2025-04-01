@@ -817,6 +817,24 @@ extern "C" {
         orientation::orient(obj);
     }
 
+    JNIEXPORT jboolean JNICALL Java_ru_ytkab0bp_slicebeam_slic3r_Native_model_1is_1big_1object(JNIEnv* env, jclass, jlong ptr, jint i) {
+        ModelRef* model = (ModelRef*) (intptr_t) ptr;
+        ModelObject* obj = model->model.objects[i];
+        return obj->volumes.size() == 1 && obj->volumes.front()->mesh().its.indices.size() >= 100000;
+    }
+
+    JNIEXPORT jint JNICALL Java_ru_ytkab0bp_slicebeam_slic3r_Native_model_1get_1extruder(JNIEnv* env, jclass, jlong ptr, jint i) {
+        ModelRef* model = (ModelRef*) (intptr_t) ptr;
+        ModelObject* obj = model->model.objects[i];
+        return obj->config.has("extruder") ? obj->config.opt_int("extruder") : -1;
+    }
+
+    JNIEXPORT void JNICALL Java_ru_ytkab0bp_slicebeam_slic3r_Native_model_1set_1extruder(JNIEnv* env, jclass, jlong ptr, jint i, jint extruder) {
+        ModelRef* model = (ModelRef*) (intptr_t) ptr;
+        ModelObject* obj = model->model.objects[i];
+        obj->config.set("extruder", extruder);
+    }
+
     JNIEXPORT jlong JNICALL Java_ru_ytkab0bp_slicebeam_slic3r_Native_model_1slice(JNIEnv* env, jclass, jlong ptr, jstring configPath, jstring path, jobject listener) {
         try {
             ModelRef* model = (ModelRef*) (intptr_t) ptr;
@@ -1453,6 +1471,7 @@ extern "C" {
 
         ref->data = libvgcode_convert_input_data(resultRef->result, resultRef->result.extruder_colors, resultRef->result.extruder_colors, ref->viewer);
         ref->viewer.load(std::move(ref->data));
+        ref->viewer.set_time_mode(libvgcode::ETimeMode::Normal);
     }
 
     JNIEXPORT void JNICALL Java_ru_ytkab0bp_slicebeam_slic3r_Native_vgcode_1reset(JNIEnv* env, jclass, jlong ptr) {

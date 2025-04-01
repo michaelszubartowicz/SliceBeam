@@ -72,6 +72,9 @@ class Native {
     static native void model_flatten_rotate(long ptr, int i, long surfacePtr);
     static native long[] model_create_flatten_planes(long ptr, int i);
     static native void model_auto_orient(long ptr, int i);
+    static native boolean model_is_big_object(long ptr, int i);
+    static native int model_get_extruder(long ptr, int i);
+    static native void model_set_extruder(long ptr, int i, int extruder);
     static native long model_slice(long ptr, String configPath, String path, SliceListener listener) throws Slic3rRuntimeError;
     static native void model_release(long ptr);
 

@@ -47,6 +47,12 @@ public class BeamTheme {
         colors.put(R.attr.yTrackColor, 0xff00bf00);
         colors.put(R.attr.zTrackColor, 0xff0000bf);
 
+        colors.put(R.attr.snackbarBase, 0xFFEEEEEE);
+        colors.put(R.attr.snackbarDone, 0xFF56AB2F);
+        colors.put(R.attr.snackbarWarning, 0xFFAE660C);
+        colors.put(R.attr.snackbarInfo, 0xFF009DC6);
+        colors.put(R.attr.snackbarError, 0xFFDC100E);
+
         colors.put(android.R.attr.textColorPrimary, 0xff000000);
         colors.put(android.R.attr.textColorSecondary, 0x99000000);
         colors.put(android.R.attr.windowBackground, 0xffffffff);
@@ -72,6 +78,8 @@ public class BeamTheme {
         colors.put(R.attr.xTrackColor, 0xffee0000);
         colors.put(R.attr.yTrackColor, 0xff00ee00);
         colors.put(R.attr.zTrackColor, 0xff0000ee);
+
+        colors.put(R.attr.snackbarBase, 0xFF212121);
 
         colors.put(android.R.attr.textColorPrimary, 0xffffffff);
         colors.put(android.R.attr.textColorSecondary, 0x99ffffff);

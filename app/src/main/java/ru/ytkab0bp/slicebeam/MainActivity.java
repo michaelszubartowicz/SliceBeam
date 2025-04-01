@@ -2,14 +2,20 @@ package ru.ytkab0bp.slicebeam;
 
 import android.app.Activity;
 import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.Process;
 import android.provider.MediaStore;
+import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.SparseArray;
@@ -28,6 +34,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -40,23 +47,27 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.zip.ZipFile;
 
 import ru.ytkab0bp.slicebeam.components.BeamAlertDialogBuilder;
 import ru.ytkab0bp.slicebeam.components.ChangeLogBottomSheet;
 import ru.ytkab0bp.slicebeam.components.UnfoldMenu;
 import ru.ytkab0bp.slicebeam.config.ConfigObject;
+import ru.ytkab0bp.slicebeam.events.NeedDismissSnackbarEvent;
 import ru.ytkab0bp.slicebeam.events.NeedSnackbarEvent;
 import ru.ytkab0bp.slicebeam.events.ObjectsListChangedEvent;
 import ru.ytkab0bp.slicebeam.fragment.BedFragment;
 import ru.ytkab0bp.slicebeam.navigation.MobileNavigationDelegate;
 import ru.ytkab0bp.slicebeam.navigation.NavigationDelegate;
+import ru.ytkab0bp.slicebeam.slic3r.Model;
 import ru.ytkab0bp.slicebeam.slic3r.Slic3rConfigWrapper;
 import ru.ytkab0bp.slicebeam.slic3r.Slic3rRuntimeError;
 import ru.ytkab0bp.slicebeam.theme.ThemesRepo;
 import ru.ytkab0bp.slicebeam.utils.IOUtils;
 import ru.ytkab0bp.slicebeam.utils.Prefs;
 import ru.ytkab0bp.slicebeam.utils.ViewUtils;
+import ru.ytkab0bp.slicebeam.view.SnackbarsLayout;
 
 public class MainActivity extends AppCompatActivity {
     public final static int REQUEST_CODE_OPEN_FILE = 1, REQUEST_CODE_EXPORT_GCODE = 2,
@@ -496,6 +507,51 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
+    private void loadFile(File f, boolean autoorient) {
+        String tag = UUID.randomUUID().toString();
+        SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.LOADING, R.string.MenuFileOpenFileLoading).tag(tag));
+        IOUtils.IO_POOL.submit(() -> {
+            Process.setThreadPriority(-20);
+            if (delegate.getCurrentFragment() instanceof BedFragment) {
+                BedFragment fragment = (BedFragment) delegate.getCurrentFragment();
+                try {
+                    boolean gcode = f.getName().endsWith(".gcode");
+                    if (gcode) {
+                        fragment.loadGCode(f);
+                    } else {
+                        fragment.loadModel(f);
+                    }
+                    fragment.getGlView().queueEvent(() -> {
+                        if (!gcode) {
+                            SliceBeam.EVENT_BUS.fireEvent(new ObjectsListChangedEvent());
+                        }
+                        Model model = fragment.getGlView().getRenderer().getModel();
+                        int i = model.getObjectsCount() - 1;
+                        if (autoorient) {
+                            model.autoOrient(i);
+                            fragment.getGlView().getRenderer().invalidateGlModel(i);
+                            fragment.getGlView().requestRender();
+                        }
+                        SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(tag));
+                        SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(R.string.MenuFileOpenFileLoaded));
+                        if (model.isBigObject(i)) {
+                            SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.WARNING, R.string.MenuFileOpenFileBigObject));
+                        }
+                    });
+                } catch (Slic3rRuntimeError e) {
+                    Log.e("MainActivity", "Failed to load model", e);
+                    f.delete();
+
+                    ViewUtils.postOnMainThread(() -> new BeamAlertDialogBuilder(this)
+                            .setTitle(R.string.MenuFileOpenFileFailed)
+                            .setMessage(e.toString())
+                            .setPositiveButton(android.R.string.ok, null)
+                            .show());
+                }
+            }
+        });
+    }
+
     private void loadFile(Uri uri) {
         if (uri == null) return;
 
@@ -534,30 +590,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 fos.close();
                 in.close();
-
-                ViewUtils.postOnMainThread(() -> {
-                    if (delegate.getCurrentFragment() instanceof BedFragment) {
-                        BedFragment fragment = (BedFragment) delegate.getCurrentFragment();
-                        try {
-                            if (f.getName().endsWith(".gcode")) {
-                                fragment.loadGCode(f);
-                            } else {
-                                fragment.loadModel(f);
-                                SliceBeam.EVENT_BUS.fireEvent(new ObjectsListChangedEvent());
-                            }
-                            SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(R.string.MenuFileOpenFileLoaded));
-                        } catch (Slic3rRuntimeError e) {
-                            Log.e("MainActivity", "Failed to load model", e);
-                            f.delete();
-
-                            ViewUtils.postOnMainThread(() -> new BeamAlertDialogBuilder(this)
-                                    .setTitle(R.string.MenuFileOpenFileFailed)
-                                    .setMessage(e.toString())
-                                    .setPositiveButton(android.R.string.ok, null)
-                                    .show());
-                        }
-                    }
-                });
+                loadFile(f, false);
             } catch (Exception e) {
                 Log.e("MainActivity", "Failed to write cache file", e);
 
