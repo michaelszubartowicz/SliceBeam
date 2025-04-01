@@ -709,7 +709,7 @@ public abstract class ProfileListFragment extends Fragment {
                             .setPositiveButton(android.R.string.ok, null)
                             .show();
                     return true;
-                });;
+                });
 
                 if (def.type == ConfigOptionDef.ConfigOptionType.STRING || def.type == ConfigOptionDef.ConfigOptionType.STRINGS) {
                     ((PreferenceItem) simpleItem).setSubtitleProvider(() -> opt(def, eIndex).trim());

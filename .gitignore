@@ -30,6 +30,9 @@ app/src/main/jni/occt_wrapper/occtwrapper_export.h
 app/release/
 
 .idea/
+.project
+.classpath
+.settings
 
 app/src/main/jniImports/boost/
 app/src/main/jniImports/oneTBB/
