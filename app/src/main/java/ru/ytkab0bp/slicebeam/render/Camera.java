@@ -34,7 +34,7 @@ public class Camera {
     }
 
     public void zoom(float zoom) {
-        this.zoom = MathUtils.clamp(this.zoom + zoom / 25f, 1f, 5f);
+        this.zoom = MathUtils.clamp(this.zoom + zoom / 25f, 1f, 10f);
     }
 
     public void setZoom(float zoom) {
