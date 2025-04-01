@@ -433,6 +433,7 @@ public abstract class ProfileListFragment extends Fragment {
     public void onDestroy() {
         super.onDestroy();
         SliceBeam.EVENT_BUS.unregisterListener(this);
+        unfolded.clear();
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -477,7 +478,9 @@ public abstract class ProfileListFragment extends Fragment {
         String v = getCurrentConfig().get(def.key);
         if (i != -1) {
             try {
-                v = v.split(",")[i];
+                String ch = ",";
+                if (def.guiType == ConfigOptionDef.GUIType.COLOR) ch = ";";
+                v = v.split(ch)[i];
             } catch (ArrayIndexOutOfBoundsException e) {
                 Log.w("ProfileListFragment", "Failed to parse mm option", e);
             }
@@ -487,9 +490,11 @@ public abstract class ProfileListFragment extends Fragment {
 
     protected void updateConfigField(ConfigOptionDef def, int i, String value) {
         if (i != -1) {
-            String[] vals = opt(def, -1).split(",");
+            String ch = ",";
+            if (def.guiType == ConfigOptionDef.GUIType.COLOR) ch = ";";
+            String[] vals = opt(def, -1).split(ch);
             vals[i] = value;
-            value = TextUtils.join(",", vals);
+            value = TextUtils.join(ch, vals);
         }
 
         if (!Objects.equals(opt(def, i), value)) {
@@ -697,7 +702,14 @@ public abstract class ProfileListFragment extends Fragment {
                     }
 
                     ref.set(builder.show());
-                });
+                }).setOnLongClickListener(v -> {
+                    new BeamAlertDialogBuilder(getContext())
+                            .setTitle(Slic3rLocalization.getString(def.getFullLabel()))
+                            .setMessage(Slic3rLocalization.getString(def.tooltip))
+                            .setPositiveButton(android.R.string.ok, null)
+                            .show();
+                    return true;
+                });;
 
                 if (def.type == ConfigOptionDef.ConfigOptionType.STRING || def.type == ConfigOptionDef.ConfigOptionType.STRINGS) {
                     ((PreferenceItem) simpleItem).setSubtitleProvider(() -> opt(def, eIndex).trim());
@@ -727,9 +739,21 @@ public abstract class ProfileListFragment extends Fragment {
                 case BOOLS:
                     simpleItem = new PreferenceSwitchItem().setTitle(Slic3rLocalization.getString(def.label))
                             .setValueProvider(() -> "1".equals(opt(def, eIndex)))
-                            .setChangeListener((buttonView, isChecked) -> updateConfigField(def, eIndex, String.valueOf(isChecked ? 1 : 0)));
+                            .setChangeListener((buttonView, isChecked) -> updateConfigField(def, eIndex, String.valueOf(isChecked ? 1 : 0)))
+                            .setLongClickListener(v -> {
+                                new BeamAlertDialogBuilder(getContext())
+                                        .setTitle(Slic3rLocalization.getString(def.getFullLabel()))
+                                        .setMessage(Slic3rLocalization.getString(def.tooltip))
+                                        .setPositiveButton(android.R.string.ok, null)
+                                        .show();
+                                return true;
+                            });
                     break;
             }
+        }
+
+        public OptionElement(int specialType) {
+            this.specialType = specialType;
         }
 
         public OptionElement(int icon, String title) {
@@ -858,7 +882,6 @@ public abstract class ProfileListFragment extends Fragment {
         @Override
         public View onCreateView(Context ctx) {
             FrameLayout v = new FrameLayout(ctx);
-            v.setBackgroundColor(Color.GREEN);
             v.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(32)) {{
                 bottomMargin = ViewUtils.dp(16);
             }});

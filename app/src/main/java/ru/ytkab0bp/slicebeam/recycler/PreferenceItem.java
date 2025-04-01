@@ -30,6 +30,7 @@ public class PreferenceItem extends SimpleRecyclerItem<PreferenceItem.Preference
     private CharSequence mTitle;
     private ValueProvider mSubtitle;
     private View.OnClickListener onClickListener;
+    private View.OnLongClickListener onLongClickListener;
     private int textColorRes;
     private boolean noTint;
     private ValueProvider valueProvider;
@@ -87,6 +88,11 @@ public class PreferenceItem extends SimpleRecyclerItem<PreferenceItem.Preference
 
     public PreferenceItem setOnClickListener(View.OnClickListener onClickListener) {
         this.onClickListener = onClickListener;
+        return this;
+    }
+
+    public PreferenceItem setOnLongClickListener(View.OnLongClickListener onLongClickListener) {
+        this.onLongClickListener = onLongClickListener;
         return this;
     }
 
@@ -189,6 +195,7 @@ public class PreferenceItem extends SimpleRecyclerItem<PreferenceItem.Preference
             } else {
                 setClickable(false);
             }
+            setOnLongClickListener(item.onLongClickListener);
 
             if (item.textColorRes != 0) {
                 title.setTextColor(ThemesRepo.getColor(item.textColorRes));

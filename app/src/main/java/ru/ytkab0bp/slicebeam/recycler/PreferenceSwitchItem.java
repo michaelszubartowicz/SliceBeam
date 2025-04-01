@@ -6,6 +6,7 @@ import android.graphics.drawable.Drawable;
 import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
@@ -28,6 +29,7 @@ public class PreferenceSwitchItem extends SimpleRecyclerItem<PreferenceSwitchIte
     private String mKey;
     private boolean mDefaultValue;
     private CompoundButton.OnCheckedChangeListener mChangeListener;
+    private View.OnLongClickListener mLongClickListener;
     private ValueProvider valueProvider;
 
     public PreferenceSwitchItem setValueProvider(ValueProvider valueProvider) {
@@ -43,6 +45,11 @@ public class PreferenceSwitchItem extends SimpleRecyclerItem<PreferenceSwitchIte
 
     public PreferenceSwitchItem setChangeListener(CompoundButton.OnCheckedChangeListener listener) {
         mChangeListener = listener;
+        return this;
+    }
+
+    public PreferenceSwitchItem setLongClickListener(View.OnLongClickListener longClickListener) {
+        mLongClickListener = longClickListener;
         return this;
     }
 
@@ -154,6 +161,7 @@ public class PreferenceSwitchItem extends SimpleRecyclerItem<PreferenceSwitchIte
                     item.mChangeListener.onCheckedChanged(matSwitch, check);
                 }
             });
+            setOnLongClickListener(item.mLongClickListener);
         }
 
         @Override

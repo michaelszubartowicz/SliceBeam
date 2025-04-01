@@ -34,6 +34,13 @@ public class ConfigObject implements ProfileListFragment.ProfileListItem {
         this.values.putAll(from.values);
     }
 
+    /**
+     * Note: suitable only from "printer" config
+     */
+    public int getExtruderCount() {
+        return get("nozzle_diameter") != null ? get("nozzle_diameter").replaceAll("[^.]+", "").length() : 1;
+    }
+
     public String get(String key) {
         return values.get(key);
     }

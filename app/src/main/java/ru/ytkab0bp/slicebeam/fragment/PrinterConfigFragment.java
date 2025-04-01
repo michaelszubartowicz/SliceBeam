@@ -113,7 +113,7 @@ public class PrinterConfigFragment extends ProfileListFragment {
                 // TODO: m_supports_min_feedrates? <= marlin/marlin legacy
         ));
 
-        int count = currentConfig.get("nozzle_diameter") != null ? currentConfig.get("nozzle_diameter").replaceAll("[^.]+", "").length() : 1;
+        int count = currentConfig.getExtruderCount();
         for (int i = 0; i < count; i++) {
             int j = count == 1 ? -1 : i;
             list.addAll(Arrays.asList(
