@@ -32,7 +32,7 @@ public class Prefs {
     }
 
     public static void setScaleInputInMM(boolean v) {
-        mPrefs.edit().putBoolean("scale_input_mm", true).apply();
+        mPrefs.edit().putBoolean("scale_input_mm", v).apply();
     }
 
     public static boolean isScaleLinked() {
