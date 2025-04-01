@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.util.Log;
 import android.webkit.WebView;
 
+import com.instacart.library.truetime.TrueTime;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -15,15 +17,30 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Map;
 
 import ru.ytkab0bp.eventbus.EventBus;
+import ru.ytkab0bp.slicebeam.boot.AppBoot;
+import ru.ytkab0bp.slicebeam.boot.BeamServerDataTask;
+import ru.ytkab0bp.slicebeam.boot.CheckUpdateJsonTask;
+import ru.ytkab0bp.slicebeam.boot.ClearModelCacheTask;
+import ru.ytkab0bp.slicebeam.boot.CloudInitTask;
+import ru.ytkab0bp.slicebeam.boot.EventBusTask;
+import ru.ytkab0bp.slicebeam.boot.LoadSlic3rConfigTask;
+import ru.ytkab0bp.slicebeam.boot.PrefsTask;
+import ru.ytkab0bp.slicebeam.boot.PrintConfigWarmupTask;
+import ru.ytkab0bp.slicebeam.boot.TrueTimeTask;
+import ru.ytkab0bp.slicebeam.boot.VibrationUtilsTask;
+import ru.ytkab0bp.slicebeam.cloud.CloudController;
 import ru.ytkab0bp.slicebeam.config.ConfigObject;
 import ru.ytkab0bp.slicebeam.slic3r.ConfigOptionDef;
 import ru.ytkab0bp.slicebeam.slic3r.PrintConfigDef;
 import ru.ytkab0bp.slicebeam.slic3r.Slic3rConfigWrapper;
+import ru.ytkab0bp.slicebeam.utils.IOUtils;
 import ru.ytkab0bp.slicebeam.utils.Prefs;
 import ru.ytkab0bp.slicebeam.utils.VibrationUtils;
+import ru.ytkab0bp.slicebeam.utils.ViewUtils;
 
 public class SliceBeam extends Application {
     public static SliceBeam INSTANCE;
@@ -38,36 +55,18 @@ public class SliceBeam extends Application {
     public void onCreate() {
         super.onCreate();
         INSTANCE = this;
-        EventBus.registerImpl(this);
-        Prefs.init(this);
-        VibrationUtils.init(this);
-        tryCheckInfo();
-        PrintConfigDef.getInstance();
-        try {
-            getAssets().open("update.json").close();
-            hasUpdateInfo = true;
-        } catch (IOException e) {
-            hasUpdateInfo = false;
-        }
-
-        File cache = SliceBeam.getModelCacheDir();
-        if (cache.exists()) {
-            for (File f : cache.listFiles()) {
-                f.delete();
-            }
-        }
-
-        File cfgFile = getConfigFile();
-        getCurrentConfigFile().delete();
-        if (cfgFile.exists()) {
-            try {
-                CONFIG = new Slic3rConfigWrapper(cfgFile);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
-
+        AppBoot.run(Arrays.asList(
+                new EventBusTask(),
+                new PrefsTask(),
+                new VibrationUtilsTask(),
+                new TrueTimeTask(),
+                new BeamServerDataTask(),
+                new PrintConfigWarmupTask(),
+                new CheckUpdateJsonTask(),
+                new ClearModelCacheTask(),
+                new LoadSlic3rConfigTask(),
+                new CloudInitTask()
+        ));
         Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
             StringWriter sw = new StringWriter();
             PrintWriter pw = new PrintWriter(sw);
@@ -79,17 +78,6 @@ public class SliceBeam extends Application {
             startActivity(intent);
             Runtime.getRuntime().exit(0);
         });
-    }
-
-    private static void tryCheckInfo() {
-        try {
-            SERVER_DATA = new BeamServerData(new JSONObject(Prefs.getBeamServerData()));
-        } catch (JSONException e) {
-            throw new RuntimeException(e);
-        }
-        if (System.currentTimeMillis() - Prefs.getLastCheckedInfo() >= 86400000L) {
-            BeamServerData.load();
-        }
     }
 
     public static void saveConfig() {
@@ -122,6 +110,7 @@ public class SliceBeam extends Application {
         if (SliceBeam.CONFIG.findPrint(SliceBeam.CONFIG.presets.get("print")) != null) {
             singleObject.values.putAll(SliceBeam.CONFIG.findPrint(SliceBeam.CONFIG.presets.get("print")).values);
         }
+        // TODO: MMU. Detect by printerConfig#getExtruderCount()
         if (SliceBeam.CONFIG.findFilament(SliceBeam.CONFIG.presets.get("filament")) != null) {
             singleObject.values.putAll(SliceBeam.CONFIG.findFilament(SliceBeam.CONFIG.presets.get("filament")).values);
         }
