@@ -167,6 +167,10 @@ public class Model {
         return new GCodeProcessorResult(Native.model_slice(pointer, configPath, gcodePath, listener));
     }
 
+    public void export3mf(String configPath, String _3mfPath) throws Slic3rRuntimeError {
+        Native.model_export_3mf(pointer, configPath, _3mfPath);
+    }
+
     public void release() {
         if (pointer != 0) {
             Native.model_release(pointer);

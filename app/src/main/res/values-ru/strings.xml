@@ -42,6 +42,8 @@
     <string name="MenuFileExportProfilesPrinters">Принтеры</string>
     <string name="MenuFileExportProfilesNoProfiles">Не выбрано ни одного профиля.</string>
     <string name="MenuFileExportProfilesSuccess">Профили успешно экспортированы.</string>
+    <string name="MenuFileExport3mf">Экспорт. 3mf</string>
+    <string name="MenuFileExport3mfSuccess">Успешно экспортировали проект.</string>
     <string name="MenuCamera">Камера</string>
     <string name="MenuCameraIsometric">Изомет.\nвид</string>
     <string name="MenuCameraTop">Вид\nсверху</string>

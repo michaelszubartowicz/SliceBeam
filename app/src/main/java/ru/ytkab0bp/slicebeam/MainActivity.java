@@ -5,7 +5,6 @@ import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.content.res.Configuration;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -21,7 +20,6 @@ import android.util.Log;
 import android.util.SparseArray;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -58,6 +56,7 @@ import ru.ytkab0bp.slicebeam.events.NeedDismissSnackbarEvent;
 import ru.ytkab0bp.slicebeam.events.NeedSnackbarEvent;
 import ru.ytkab0bp.slicebeam.events.ObjectsListChangedEvent;
 import ru.ytkab0bp.slicebeam.fragment.BedFragment;
+import ru.ytkab0bp.slicebeam.navigation.Fragment;
 import ru.ytkab0bp.slicebeam.navigation.MobileNavigationDelegate;
 import ru.ytkab0bp.slicebeam.navigation.NavigationDelegate;
 import ru.ytkab0bp.slicebeam.slic3r.Model;
@@ -71,7 +70,8 @@ import ru.ytkab0bp.slicebeam.view.SnackbarsLayout;
 
 public class MainActivity extends AppCompatActivity {
     public final static int REQUEST_CODE_OPEN_FILE = 1, REQUEST_CODE_EXPORT_GCODE = 2,
-                            REQUEST_CODE_IMPORT_PROFILES = 3, REQUEST_CODE_EXPORT_PROFILES = 4;
+                            REQUEST_CODE_IMPORT_PROFILES = 3, REQUEST_CODE_EXPORT_PROFILES = 4,
+                            REQUEST_CODE_EXPORT_3MF = 5,
 
     private static MainActivity activeInstance;
 
@@ -203,12 +203,39 @@ public class MainActivity extends AppCompatActivity {
         setIntent(null);
     }
 
+    /** @noinspection ResultOfMethodCallIgnored*/
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (resultCode == Activity.RESULT_OK) {
-            if (requestCode == MainActivity.REQUEST_CODE_EXPORT_GCODE) {
+            if (requestCode == MainActivity.REQUEST_CODE_EXPORT_3MF) {
+                Fragment fragment = getNavigationDelegate().getCurrentFragment();
+                if (fragment instanceof BedFragment) {
+                    try {
+                        OutputStream out = getContentResolver().openOutputStream(data.getData());
+                        Model model = ((BedFragment) fragment).getGlView().getRenderer().getModel();
+                        File tempFile = File.createTempFile("temp_project", ".3mf");
+                        SliceBeam.genCurrentConfig();
+                        File cfg = SliceBeam.getCurrentConfigFile();
+                        model.export3mf(cfg.getAbsolutePath(), tempFile.getAbsolutePath());
+
+                        InputStream in = new FileInputStream(tempFile);
+                        byte[] buffer = new byte[10240];
+                        int c;
+                        while ((c = in.read(buffer)) != -1) {
+                            out.write(buffer, 0, c);
+                        }
+                        in.close();
+                        out.close();
+                        tempFile.delete();
+
+                        SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(R.string.MenuFileExport3mfSuccess));
+                    } catch (IOException | Slic3rRuntimeError e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            } else if (requestCode == MainActivity.REQUEST_CODE_EXPORT_GCODE) {
                 try {
                     OutputStream out = getContentResolver().openOutputStream(data.getData());
                     InputStream in = new FileInputStream(BedFragment.getTempGCodePath());

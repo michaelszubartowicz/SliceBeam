@@ -5,13 +5,13 @@
 #include "libslic3r/Config.hpp"
 #include "libslic3r/Model.hpp"
 #include "libslic3r/Print.hpp"
-#include "libslic3r/PresetBundle.hpp"
 #include "libslic3r/ModelArrange.hpp"
 #include "libslic3r/SVG.hpp"
 #include "libslic3r/Geometry.hpp"
 #include "libslic3r/Arrange.hpp"
 #include "libslic3r/AABBMesh.hpp"
 #include "libslic3r/Geometry/ConvexHull.hpp"
+#include "libslic3r/Format/3mf.hpp"
 #include "bbl/Orient.hpp"
 #include "Viewer.hpp"
 
@@ -840,11 +840,10 @@ extern "C" {
             ModelRef* model = (ModelRef*) (intptr_t) ptr;
 
             Print print;
-            PresetBundle bundle;
             DynamicPrintConfig config;
             const char *chars = env->GetStringUTFChars(configPath, JNI_FALSE);
             config.load(std::string(chars), ForwardCompatibilitySubstitutionRule::Disable);
-            env->ReleaseStringUTFChars(path, chars);
+            env->ReleaseStringUTFChars(configPath, chars);
             config.normalize_fdm();
 
             for (auto* mo : model->model.objects) {
@@ -898,6 +897,24 @@ extern "C" {
         } catch (const std::exception& e) {
             env->ThrowNew(env->FindClass("ru/ytkab0bp/slicebeam/slic3r/Slic3rRuntimeError"), e.what());
             return 0;
+        }
+    }
+
+    JNIEXPORT void JNICALL Java_ru_ytkab0bp_slicebeam_slic3r_Native_model_1export_13mf(JNIEnv* env, jclass, jlong ptr, jstring configPath, jstring path) {
+        auto model = reinterpret_cast<ModelRef*>(ptr);
+
+        try {
+            DynamicPrintConfig config;
+            const char *chars = env->GetStringUTFChars(configPath, JNI_FALSE);
+            config.load(std::string(chars), ForwardCompatibilitySubstitutionRule::Disable);
+            env->ReleaseStringUTFChars(configPath, chars);
+            config.normalize_fdm();
+
+            const char *pathChars = env->GetStringUTFChars(path, JNI_FALSE);
+            Slic3r::store_3mf(pathChars, &model->model, &config, false, nullptr, false);
+            env->ReleaseStringUTFChars(path, pathChars);
+        } catch (const std::exception& e) {
+            env->ThrowNew(env->FindClass("ru/ytkab0bp/slicebeam/slic3r/Slic3rRuntimeError"), e.what());
         }
     }
 

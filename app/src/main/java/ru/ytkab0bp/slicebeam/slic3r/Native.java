@@ -76,6 +76,7 @@ class Native {
     static native int model_get_extruder(long ptr, int i);
     static native void model_set_extruder(long ptr, int i, int extruder);
     static native long model_slice(long ptr, String configPath, String path, SliceListener listener) throws Slic3rRuntimeError;
+    static native void model_export_3mf(long ptr, String configPath, String path) throws Slic3rRuntimeError;
     static native void model_release(long ptr);
 
     static native long gcoderesult_load_file(String path, String name);

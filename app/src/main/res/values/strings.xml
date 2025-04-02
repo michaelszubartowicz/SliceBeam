@@ -44,6 +44,8 @@
     <string name="MenuFileExportProfilesPrinters">Printers</string>
     <string name="MenuFileExportProfilesNoProfiles">No profiles selected.</string>
     <string name="MenuFileExportProfilesSuccess">Exported profiles successfully.</string>
+    <string name="MenuFileExport3mf">Export 3mf</string>
+    <string name="MenuFileExport3mfSuccess">Successfully exported project.</string>
     <string name="MenuCamera">Camera</string>
     <string name="MenuCameraIsometric">Isom. view</string>
     <string name="MenuCameraTop">Top view</string>
