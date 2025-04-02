@@ -1,5 +1,6 @@
 package ru.ytkab0bp.slicebeam.components.bed_menu;
 
+import android.content.Context;
 import android.widget.Toast;
 
 import androidx.dynamicanimation.animation.FloatValueHolder;
@@ -10,6 +11,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import ru.ytkab0bp.slicebeam.R;
+import ru.ytkab0bp.slicebeam.components.BeamAlertDialogBuilder;
 import ru.ytkab0bp.slicebeam.recycler.SimpleRecyclerItem;
 import ru.ytkab0bp.slicebeam.recycler.SpaceItem;
 import ru.ytkab0bp.slicebeam.render.Camera;
@@ -122,7 +124,20 @@ public class CameraMenu extends ListBedMenu {
                     animateTo(toOrigin, toPosition);
                 }),
                 new SpaceItem(portrait ? ViewUtils.dp(8) : 0, portrait ? 0 : ViewUtils.dp(8)),
-                new BedMenuItem(R.string.MenuCameraEnableRotation, R.drawable.sync_outline_28).setCheckable((buttonView, isChecked) -> Prefs.setRotationEnabled(isChecked), Prefs.isRotationEnabled()),
+                new BedMenuItem(R.string.MenuCameraControlMode, R.drawable.hand_point_up_outline_28).onClick(v -> {
+                    Context ctx = v.getContext();
+                    new BeamAlertDialogBuilder(v.getContext())
+                            .setTitle(R.string.MenuCameraControlMode)
+                            .setSingleChoiceItems(new CharSequence[] {
+                                    ctx.getString(R.string.MenuCameraControlModeOne),
+                                    ctx.getString(R.string.MenuCameraControlModeTwo),
+                                    ctx.getString(R.string.MenuCameraControlModeThree)
+                            }, Prefs.getCameraControlMode(), (dialog, which) -> {
+                                Prefs.setCameraControlMode(which);
+                                dialog.dismiss();
+                            })
+                            .show();
+                }),
                 new BedMenuItem(R.string.MenuCameraOrtho, R.drawable.image_format_32).setCheckable((buttonView, isChecked) -> {
                     Prefs.setOrthoProjectionEnabled(isChecked);
                     fragment.getGlView().getRenderer().updateProjection();

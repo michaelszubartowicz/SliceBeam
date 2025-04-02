@@ -50,7 +50,10 @@
     <string name="MenuCameraLeft">Left view</string>
     <string name="MenuCameraRight">Right view</string>
     <string name="MenuCameraOrtho">Orth. project.</string>
-    <string name="MenuCameraEnableRotation">Allow rotation</string>
+    <string name="MenuCameraControlMode">Control mode</string>
+    <string name="MenuCameraControlModeOne">One finger - rotation, two fingers - movement</string>
+    <string name="MenuCameraControlModeTwo">One finger - movement, two fingers - rotation</string>
+    <string name="MenuCameraControlModeThree">Only movement</string>
     <string name="MenuOrientation">Orientation</string>
     <string name="MenuOrientationArrange">Arrange models</string>
     <string name="MenuOrientationArrangeFinished">Models arranged.</string>

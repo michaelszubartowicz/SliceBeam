@@ -4,12 +4,6 @@ import android.annotation.SuppressLint;
 import android.app.Application;
 import android.content.Intent;
 import android.util.Log;
-import android.webkit.WebView;
-
-import com.instacart.library.truetime.TrueTime;
-
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -32,15 +26,11 @@ import ru.ytkab0bp.slicebeam.boot.PrefsTask;
 import ru.ytkab0bp.slicebeam.boot.PrintConfigWarmupTask;
 import ru.ytkab0bp.slicebeam.boot.TrueTimeTask;
 import ru.ytkab0bp.slicebeam.boot.VibrationUtilsTask;
-import ru.ytkab0bp.slicebeam.cloud.CloudController;
 import ru.ytkab0bp.slicebeam.config.ConfigObject;
 import ru.ytkab0bp.slicebeam.slic3r.ConfigOptionDef;
 import ru.ytkab0bp.slicebeam.slic3r.PrintConfigDef;
 import ru.ytkab0bp.slicebeam.slic3r.Slic3rConfigWrapper;
-import ru.ytkab0bp.slicebeam.utils.IOUtils;
 import ru.ytkab0bp.slicebeam.utils.Prefs;
-import ru.ytkab0bp.slicebeam.utils.VibrationUtils;
-import ru.ytkab0bp.slicebeam.utils.ViewUtils;
 
 public class SliceBeam extends Application {
     public static SliceBeam INSTANCE;

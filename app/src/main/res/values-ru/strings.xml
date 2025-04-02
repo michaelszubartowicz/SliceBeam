@@ -48,7 +48,10 @@
     <string name="MenuCameraLeft">Вид\nслева</string>
     <string name="MenuCameraRight">Вид\nсправа</string>
     <string name="MenuCameraOrtho">Ортог. проекц.</string>
-    <string name="MenuCameraEnableRotation">Вкл. поворот</string>
+    <string name="MenuCameraControlMode">Режим управ.</string>
+    <string name="MenuCameraControlModeOne">Один палец - поворот, два пальца - перемещение</string>
+    <string name="MenuCameraControlModeTwo">Один палец - перемещение, два пальца - поворот</string>
+    <string name="MenuCameraControlModeThree">Только перемещение</string>
     <string name="MenuOrientation">Ориентация</string>
     <string name="MenuOrientationArrange">Расст. модели</string>
     <string name="MenuOrientationArrangeFinished">Модели расставлены.</string>

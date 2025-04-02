@@ -68,12 +68,12 @@ public class Prefs {
         return mPrefs.getString("beam_server_data", "{}");
     }
 
-    public static boolean isRotationEnabled() {
-        return mPrefs.getBoolean("rotation_enabled", true);
+    public static int getCameraControlMode() {
+        return mPrefs.getInt("camera_control_mode", mPrefs.getBoolean("rotation_enabled", true) ? CAMERA_CONTROL_MODE_ROTATE_MOVE : CAMERA_CONTROL_MODE_MOVE_ONLY);
     }
 
-    public static void setRotationEnabled(boolean e) {
-        mPrefs.edit().putBoolean("rotation_enabled", e).apply();
+    public static void setCameraControlMode(int mode) {
+        mPrefs.edit().putInt("camera_control_mode", mode).apply();
     }
 
     public static boolean isOrthoProjectionEnabled() {

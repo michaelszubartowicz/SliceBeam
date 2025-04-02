@@ -38,8 +38,8 @@ public class GLView extends GLSurfaceView implements IThemeView {
     private int touchSlop;
 
     private boolean fromTwoPointers;
-    private boolean isRotating;
-    private boolean isMoving;
+    private boolean onePointerGesture;
+    private boolean twoPointerGesture;
     private boolean isScaling;
 
     private long lastActionTime = System.currentTimeMillis();
@@ -268,14 +268,14 @@ public class GLView extends GLSurfaceView implements IThemeView {
                 if (e.getPointerCount() == 1) {
                     fromTwoPointers = false;
                     isScaling = false;
-                    isMoving = false;
+                    twoPointerGesture = false;
                     lastActionTime = 0;
                 }
                 return true;
             }
 
             if (e.getPointerCount() == 1) {
-                if (!isRotating && action != MotionEvent.ACTION_CANCEL) {
+                if (!onePointerGesture && action != MotionEvent.ACTION_CANCEL) {
                     if (renderer.onClick(e.getX() * Prefs.getRenderScale(), e.getY() * Prefs.getRenderScale())) {
                         requestRender();
                     }
@@ -283,7 +283,7 @@ public class GLView extends GLSurfaceView implements IThemeView {
 
                 lastX = e.getX(0);
                 lastY = e.getY(0);
-                isRotating = false;
+                onePointerGesture = false;
             }
 
             // TODO: Rotate with inertia
@@ -300,16 +300,16 @@ public class GLView extends GLSurfaceView implements IThemeView {
 
                 if (deltaMs > 128) {
                     isScaling = false;
-                    isMoving = false;
+                    twoPointerGesture = false;
                 }
 
                 boolean startingGesture = false;
-                if (!isScaling && !isMoving) {
+                if (!isScaling && !twoPointerGesture) {
                     if (Math.abs(distanceX) < touchSlop && Math.abs(distanceY) < touchSlop && Math.abs(len - lastLength) > touchSlop * 1.5f) {
                         isScaling = true;
                         startingGesture = true;
                     } else if (Math.sqrt(distanceX * distanceX + distanceY * distanceY) >= touchSlop) {
-                        isMoving = true;
+                        twoPointerGesture = true;
                         startingGesture = true;
                     }
                 }
@@ -325,9 +325,14 @@ public class GLView extends GLSurfaceView implements IThemeView {
 
                     lastX = x;
                     lastY = y;
-                } else if (isMoving) {
+                } else if (twoPointerGesture) {
                     if (!startingGesture) {
-                        renderer.getCamera().move(distanceX / touchSlop * Prefs.getCameraSensitivity(), distanceY / touchSlop * Prefs.getCameraSensitivity());
+                        int mode = Prefs.getCameraControlMode();
+                        if (mode == Prefs.CAMERA_CONTROL_MODE_ROTATE_MOVE || mode == Prefs.CAMERA_CONTROL_MODE_MOVE_ONLY) {
+                            renderer.getCamera().move(distanceX / touchSlop * Prefs.getCameraSensitivity(), distanceY / touchSlop * Prefs.getCameraSensitivity());
+                        } else {
+                            renderer.getCamera().rotateAround(distanceX / touchSlop * Prefs.getCameraSensitivity(), distanceY / touchSlop * Prefs.getCameraSensitivity());
+                        }
                         requestRender();
                     }
 
@@ -338,16 +343,17 @@ public class GLView extends GLSurfaceView implements IThemeView {
                 float distanceX = lastX - e.getX(), distanceY = lastY - e.getY();
                 boolean startingGesture = false;
 
-                if (!isRotating) {
+                if (!onePointerGesture) {
                     if (Math.sqrt(distanceX * distanceX + distanceY * distanceY) >= touchSlop) {
-                        isRotating = true;
+                        onePointerGesture = true;
                         startingGesture = true;
                     }
                 }
 
-                if (isRotating) {
+                if (onePointerGesture) {
                     if (!startingGesture) {
-                        if (Prefs.isRotationEnabled()) {
+                        int mode = Prefs.getCameraControlMode();
+                        if (mode == Prefs.CAMERA_CONTROL_MODE_ROTATE_MOVE) {
                             renderer.getCamera().rotateAround(distanceX / touchSlop * Prefs.getCameraSensitivity(), distanceY / touchSlop * Prefs.getCameraSensitivity());
                         } else {
                             renderer.getCamera().move(distanceX / touchSlop * Prefs.getCameraSensitivity(), distanceY / touchSlop * Prefs.getCameraSensitivity());
