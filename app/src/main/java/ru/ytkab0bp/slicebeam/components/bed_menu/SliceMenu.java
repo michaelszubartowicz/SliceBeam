@@ -41,6 +41,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 import cz.msebera.android.httpclient.Header;
 import cz.msebera.android.httpclient.entity.ContentType;
@@ -52,6 +53,7 @@ import ru.ytkab0bp.slicebeam.SliceBeam;
 import ru.ytkab0bp.slicebeam.components.BeamAlertDialogBuilder;
 import ru.ytkab0bp.slicebeam.components.UnfoldMenu;
 import ru.ytkab0bp.slicebeam.config.ConfigObject;
+import ru.ytkab0bp.slicebeam.events.NeedDismissSnackbarEvent;
 import ru.ytkab0bp.slicebeam.events.NeedSnackbarEvent;
 import ru.ytkab0bp.slicebeam.fragment.BedFragment;
 import ru.ytkab0bp.slicebeam.recycler.SimpleRecyclerItem;
@@ -64,13 +66,14 @@ import ru.ytkab0bp.slicebeam.utils.ViewUtils;
 import ru.ytkab0bp.slicebeam.view.DividerView;
 import ru.ytkab0bp.slicebeam.view.PositionScrollView;
 import ru.ytkab0bp.slicebeam.view.SegmentsView;
+import ru.ytkab0bp.slicebeam.view.SnackbarsLayout;
 
 public class SliceMenu extends ListBedMenu {
     private AsyncHttpClient client = new AsyncHttpClient();
 
     {
         client.setLoggingEnabled(true);
-        client.setMaxRetriesAndTimeout(0, 5000);
+        client.setMaxRetriesAndTimeout(0, 10000);
     }
 
     private final static List<String> SUPPORTED_SEND = Collections.singletonList("octoprint");
@@ -132,7 +135,8 @@ public class SliceMenu extends ListBedMenu {
                 if (!host.startsWith("http://")) {
                     host = "http://" + host;
                 }
-                SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(R.string.MenuSliceSendToPrinterStarted));
+                String tag = UUID.randomUUID().toString();
+                SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.LOADING, R.string.MenuSliceSendToPrinterLoading).tag(tag));
                 Header[] headers = TextUtils.isEmpty(apiKey) ? new Header[0] : new Header[] {new BasicHeader("X-Api-Key", apiKey)};
                 RequestParams params = new RequestParams();
                 try {
@@ -151,7 +155,8 @@ public class SliceMenu extends ListBedMenu {
                             if (!obj.has("action") && !obj.has("files")) {
                                 throw new JSONException(obj.toString());
                             }
-                            SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(print ? R.string.MenuSliceSendToPrinterPrintStarted : R.string.MenuSliceSendToPrinterOK));
+                            SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(tag));
+                            SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(print ? SnackbarsLayout.Type.INFO : SnackbarsLayout.Type.DONE, print ? R.string.MenuSliceSendToPrinterPrintStarted : R.string.MenuSliceSendToPrinterOK));
                         } catch (JSONException e) {
                             onFailure(statusCode, headers, responseBody, e);
                         }
@@ -159,6 +164,7 @@ public class SliceMenu extends ListBedMenu {
 
                     @Override
                     public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
+                        SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(tag));
                         ViewUtils.postOnMainThread(() -> new BeamAlertDialogBuilder(fragment.getContext())
                                 .setTitle(R.string.MenuSliceSendToPrinterFailed)
                                 .setMessage(error.toString())

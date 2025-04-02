@@ -33,12 +33,15 @@
     <string name="MenuFileCalibrationsModelsSphere">Сфера</string>
     <string name="MenuFileImportProfiles">Импорт. профилей</string>
     <string name="MenuFileImportProfilesFailed">Не удалось импортировать</string>
+    <string name="MenuFileImportProfilesFailedBaseProfileNotFound">Родительский профиль не найден: %s</string>
     <string name="MenuFileImportProfilesFailedNotIni">Не файл .ini</string>
+    <string name="MenuFileImportProfilesFailedEmpty">Файл не содержит профилей</string>
     <string name="MenuFileExportProfiles">Экспорт. профилей</string>
     <string name="MenuFileExportProfilesPrints">Профили печати</string>
     <string name="MenuFileExportProfilesFilaments">Филаменты</string>
     <string name="MenuFileExportProfilesPrinters">Принтеры</string>
     <string name="MenuFileExportProfilesNoProfiles">Не выбрано ни одного профиля.</string>
+    <string name="MenuFileExportProfilesSuccess">Профили успешно экспортированы.</string>
     <string name="MenuCamera">Камера</string>
     <string name="MenuCameraIsometric">Изомет.\nвид</string>
     <string name="MenuCameraTop">Вид\nсверху</string>
@@ -48,7 +51,8 @@
     <string name="MenuCameraLeft">Вид\nслева</string>
     <string name="MenuCameraRight">Вид\nсправа</string>
     <string name="MenuCameraOrtho">Ортог. проекц.</string>
-    <string name="MenuCameraControlMode">Режим управ.</string>
+    <string name="MenuCameraControlMode">Режим управл.</string>
+    <string name="MenuCameraControlModeFull">Режим управления</string>
     <string name="MenuCameraControlModeOne">Один палец - поворот, два пальца - перемещение</string>
     <string name="MenuCameraControlModeTwo">Один палец - перемещение, два пальца - поворот</string>
     <string name="MenuCameraControlModeThree">Только перемещение</string>
@@ -99,7 +103,7 @@
     <string name="MenuSliceShare">Отправка</string>
     <string name="MenuSliceSendToPrinter">Отправ. на принтер</string>
     <string name="MenuSliceSendToPrinterAndPrint">Отправ. на печать</string>
-    <string name="MenuSliceSendToPrinterStarted">Загрузка началась…</string>
+    <string name="MenuSliceSendToPrinterLoading">Отправка…</string>
     <string name="MenuSliceSendToPrinterOK">Файл отправлен на принтер.</string>
     <string name="MenuSliceSendToPrinterPrintStarted">Файл отправлен, начало печати…</string>
     <string name="MenuSliceSendToPrinterFailed">Не удалось отправить файл</string>

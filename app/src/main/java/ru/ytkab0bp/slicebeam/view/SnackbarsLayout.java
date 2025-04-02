@@ -215,7 +215,7 @@ public class SnackbarsLayout extends FrameLayout {
                         }
                     })
                     .addEndListener((animation, canceled, value, velocity) -> {
-                        if (remove) {
+                        if (remove && getParent() != null) {
                             ((ViewGroup) getParent()).removeView(SnackbarView.this);
                         }
                     })

@@ -9,6 +9,10 @@ import ru.ytkab0bp.slicebeam.R;
 import ru.ytkab0bp.slicebeam.SetupActivity;
 
 public class Prefs {
+    public final static int CAMERA_CONTROL_MODE_ROTATE_MOVE = 0,
+                            CAMERA_CONTROL_MODE_MOVE_ROTATE = 1,
+                            CAMERA_CONTROL_MODE_MOVE_ONLY = 2;
+
     private static SharedPreferences mPrefs;
 
     public static void init(Application ctx) {

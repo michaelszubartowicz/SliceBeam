@@ -124,10 +124,10 @@ public class CameraMenu extends ListBedMenu {
                     animateTo(toOrigin, toPosition);
                 }),
                 new SpaceItem(portrait ? ViewUtils.dp(8) : 0, portrait ? 0 : ViewUtils.dp(8)),
-                new BedMenuItem(R.string.MenuCameraControlMode, R.drawable.hand_point_up_outline_28).onClick(v -> {
+                new BedMenuItem(R.string.MenuCameraControlMode, R.drawable.rectangle_hand_point_up_28).onClick(v -> {
                     Context ctx = v.getContext();
                     new BeamAlertDialogBuilder(v.getContext())
-                            .setTitle(R.string.MenuCameraControlMode)
+                            .setTitle(R.string.MenuCameraControlModeFull)
                             .setSingleChoiceItems(new CharSequence[] {
                                     ctx.getString(R.string.MenuCameraControlModeOne),
                                     ctx.getString(R.string.MenuCameraControlModeTwo),

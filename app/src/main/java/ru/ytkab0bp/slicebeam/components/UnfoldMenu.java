@@ -204,9 +204,12 @@ public abstract class UnfoldMenu {
                         }
                         fragment.getGlView().invalidate();
                     }
-                });
+                })
+                .addEndListener((animation, canceled, value, velocity) -> onShown());
         spring.start();
     }
+
+    protected void onShown() {}
 
     public void relayout() {
         FrameLayout into = containerLayout;

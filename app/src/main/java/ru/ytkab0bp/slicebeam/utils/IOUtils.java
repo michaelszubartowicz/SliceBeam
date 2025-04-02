@@ -1,5 +1,9 @@
 package ru.ytkab0bp.slicebeam.utils;
 
+import android.content.ContentResolver;
+import android.database.Cursor;
+import android.net.Uri;
+import android.provider.MediaStore;
 import android.text.TextUtils;
 
 import org.json.JSONArray;
@@ -9,21 +13,39 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import ru.ytkab0bp.slicebeam.SliceBeam;
 import ru.ytkab0bp.slicebeam.config.ConfigObject;
 
 public class IOUtils {
     public static ExecutorService IO_POOL = Executors.newCachedThreadPool();
 
+    public static String getDisplayName(Uri uri) {
+        ContentResolver resolver = SliceBeam.INSTANCE.getContentResolver();
+
+        String[] projection = {MediaStore.MediaColumns.DISPLAY_NAME};
+        Cursor metaCursor = resolver.query(uri, projection, null, null, null);
+        String fileName = null;
+        if (metaCursor != null) {
+            try {
+                if (metaCursor.moveToFirst()) {
+                    fileName = metaCursor.getString(0);
+                }
+            } finally {
+                metaCursor.close();
+            }
+        }
+        return fileName;
+    }
     public static String readString(InputStream in) throws IOException {
         return readString(in, false);
     }
@@ -54,10 +76,13 @@ public class IOUtils {
         }
     }
 
-    private static ConfigObject downloadProfilesRecursively(String vendor, String type, String profile, List<String> supportedKeys) throws IOException, JSONException {
+    private static ConfigObject downloadProfilesRecursively(String vendor, String type, String profile, List<String> supportedKeys) throws IOException, JSONException, MissingProfileException {
         ConfigObject cfg = new ConfigObject();
 
-        URLConnection con = new URL(String.format("https://raw.githubusercontent.com/SoftFever/OrcaSlicer/main/resources/profiles/%s/%s/%s.json", vendor, type, profile)).openConnection();
+        HttpURLConnection con = (HttpURLConnection) new URL(String.format("https://raw.githubusercontent.com/SoftFever/OrcaSlicer/main/resources/profiles/%s/%s/%s.json", vendor, type, profile)).openConnection();
+        if (con.getResponseCode() == 404) {
+            throw new MissingProfileException(profile);
+        }
         JSONObject obj = new JSONObject(readString(con.getInputStream()));
         if (!TextUtils.isEmpty(obj.optString("inherits", null))) {
             ConfigObject o = downloadProfilesRecursively(vendor, type, obj.getString("inherits"), supportedKeys);
@@ -116,19 +141,103 @@ public class IOUtils {
 
                 ConfigObject _obj = downloadProfilesRecursively(vendor, type, inherit, supportedKeys);
                 for (Map.Entry<String, String> en : _obj.values.entrySet()) {
-                    if (supportedKeys.contains(en.getKey())) {
-                        if (en.getKey().equals("printable_area")) {
-                            cfg.values.put("bed_shape", en.getValue());
-                        } else if (en.getKey().equals("ironing_type") && en.getValue().equals("no ironing")) {
+                    String key = en.getKey();
+                    switch (key) {
+                        case "machine_start_gcode":
+                            key = "start_gcode";
+                            break;
+                        case "machine_end_gcode":
+                            key = "end_gcode";
+                            break;
+                        case "printable_area":
+                            key = "bed_shape";
+                            break;
+                        case "printable_height":
+                            key = "max_print_height";
+                            break;
+                        case "layer_change_gcode":
+                            key = "layer_gcode";
+                            break;
+                        case "before_layer_change_gcode":
+                            key = "before_layer_gcode";
+                            break;
+                        case "filament_start_gcode":
+                            key = "start_filament_gcode";
+                            break;
+                        case "filament_end_gcode":
+                            key = "end_filament_gcode";
+                            break;
+                        case "retraction_minimum_level":
+                            key = "retract_before_travel";
+                            break;
+                        case "retraction_length":
+                            key = "retract_length";
+                            break;
+                        case "retraction_speed":
+                            key = "retract_speed";
+                            break;
+                        case "deretraction_speed":
+                            key = "deretract_speed";
+                            break;
+                        case "change_filament_gcode":
+                            key = "pause_print_gcode";
+                            break;
+                        case "nozzle_temperature":
+                            key = "temperature";
+                            break;
+                        case "nozzle_temperature_initial_layer":
+                            key = "first_layer_temperature";
+                            break;
+                        case "filament_flow_ratio":
+                            key = "extrusion_multiplier";
+                            break;
+                        case "chamber_temperatures":
+                            key = "chamber_temperature";
+                            break;
+                        case "fan_max_speed":
+                            key = "max_fan_speed";
+                            break;
+                        case "fan_min_speed":
+                            key = "min_fan_speed";
+                            break;
+                        case "overhang_fan_speed":
+                            key = "bridge_fan_speed";
+                            break;
+                        case "slow_down_layer_time":
+                            key = "slowdown_below_layer_time";
+                            break;
+                        case "slow_down_min_speed":
+                            key = "min_print_speed";
+                            break;
+                    }
+
+                    if (key.equals("pressure_advance")) {
+                        StringBuilder sb = new StringBuilder("SET_PRESSURE_ADVANCE ADVANCE=").append(en.getValue());
+                        if (cfg.values.containsKey("start_filament_gcode")) {
+                            sb.append("\n").append(cfg.get("start_filament_gcode"));
+                        }
+                        cfg.values.put("start_filament_gcode", sb.toString());
+                    }
+
+                    if (supportedKeys.contains(key)) {
+                        if (key.equals("ironing_type") && en.getValue().equals("no ironing")) {
                             cfg.values.put("ironing", "0");
                             cfg.values.put("ironing_type", "top");
-                        } if (en.getKey().equals("start_filament_gcode") || en.getKey().equals("end_filament_gcode") ||
-                            en.getKey().equals("start_gcode") || en.getKey().equals("end_gcode")) {
+                        }
+                        if (key.equals("start_filament_gcode") || key.equals("end_filament_gcode") ||
+                            key.equals("start_gcode") || key.equals("end_gcode")) {
 
-                            cfg.values.put(en.getKey(), en.getValue().replaceAll("(\\{|\\[)nozzle_temperature_initial_layer(\\[\\d+]|)(}|])", "$1first_layer_temperature$2$3")
+                            String val = en.getValue();
+                            if (key.equals("start_filament_gcode")) {
+                                if (cfg.values.containsKey("start_filament_gcode")) {
+                                    val = cfg.get("start_filament_gcode") + "\n" + val;
+                                }
+                            }
+
+                            cfg.values.put(key, val.replaceAll("(\\{|\\[)nozzle_temperature_initial_layer(\\[\\d+]|)(}|])", "$1first_layer_temperature$2$3")
                                     .replaceAll("(\\{|\\[)bed_temperature_initial_layer_single(\\[\\d+]|)(}|])", "$1first_layer_bed_temperature$2$3"));
-                        } else if (!en.getKey().equals("thumbnails")) {
-                            cfg.values.put(en.getKey(), en.getValue());
+                        } else if (!key.equals("thumbnails")) {
+                            cfg.values.put(key, en.getValue());
                         }
                     }
                 }

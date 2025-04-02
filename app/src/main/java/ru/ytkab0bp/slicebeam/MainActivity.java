@@ -249,25 +249,14 @@ public class MainActivity extends AppCompatActivity {
                     OutputStream out = getContentResolver().openOutputStream(data.getData());
                     out.write(w.serialize().getBytes(StandardCharsets.UTF_8));
                     out.close();
+
+                    SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(R.string.MenuFileExportProfilesSuccess));
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
             } else if (requestCode == MainActivity.REQUEST_CODE_IMPORT_PROFILES) {
                 Uri uri = data.getData();
-                ContentResolver resolver = getContentResolver();
-
-                String[] projection = {MediaStore.MediaColumns.DISPLAY_NAME};
-                Cursor metaCursor = resolver.query(uri, projection, null, null, null);
-                String fileName = null;
-                if (metaCursor != null) {
-                    try {
-                        if (metaCursor.moveToFirst()) {
-                            fileName = metaCursor.getString(0);
-                        }
-                    } finally {
-                        metaCursor.close();
-                    }
-                }
+                String fileName = IOUtils.getDisplayName(uri);
 
                 if (fileName == null) {
                     new BeamAlertDialogBuilder(this)
@@ -279,136 +268,7 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 if (fileName.endsWith(".orca_printer")) {
-                    Toast.makeText(MainActivity.this, R.string.OrcaConversionPleaseWait, Toast.LENGTH_SHORT).show();
-
-                    File f = new File(SliceBeam.getModelCacheDir(), "orca_conv.zip");
-                    new Thread(()->{
-                        try {
-                            InputStream in = resolver.openInputStream(uri);
-                            FileOutputStream fos = new FileOutputStream(f);
-                            byte[] buffer = new byte[10240]; int c;
-                            while ((c = in.read(buffer)) != -1) {
-                                fos.write(buffer, 0, c);
-                            }
-                            fos.close();
-                            in.close();
-
-                            ZipFile zf = new ZipFile(f);
-                            JSONObject bundle = new JSONObject(IOUtils.readString(zf.getInputStream(zf.getEntry("bundle_structure.json"))));
-                            if (!bundle.get("bundle_type").equals("printer config bundle")) {
-                                zf.close();
-
-                                ViewUtils.postOnMainThread(() -> new BeamAlertDialogBuilder(this)
-                                        .setTitle(R.string.MenuFileImportProfilesFailed)
-                                        .setMessage(R.string.OrcaConversionNotAConfigBundle)
-                                        .setPositiveButton(android.R.string.ok, null)
-                                        .show());
-
-                                return;
-                            }
-
-                            Slic3rConfigWrapper w = new Slic3rConfigWrapper();
-                            if (bundle.has("process_config")) {
-                                JSONArray arr = bundle.getJSONArray("process_config");
-                                List<String> names = new ArrayList<>();
-                                List<String> stripped = new ArrayList<>();
-                                for (int i = 0; i < arr.length(); i++) {
-                                    String v = arr.getString(i);
-                                    names.add(v);
-                                    stripped.add(v.substring(v.indexOf('/') + 1, v.length() - 5));
-                                }
-
-                                for (String name : names) {
-                                    w.printConfigs.add(IOUtils.configJsonToIni(new JSONObject(IOUtils.readString(zf.getInputStream(zf.getEntry(name)))), "process", Slic3rConfigWrapper.PRINT_CONFIG_KEYS, stripped));
-                                }
-                                for (ConfigObject obj : w.printConfigs) {
-                                    String inherit = obj.get("inherits");
-                                    while (inherit != null) {
-                                        ConfigObject _obj = w.findPrint(inherit);
-                                        if (_obj == null) throw new IOUtils.MissingProfileException(inherit);
-
-                                        obj.values.remove("inherits");
-                                        HashMap<String, String> newMap = new HashMap<>();
-                                        newMap.putAll(_obj.values);
-                                        newMap.putAll(obj.values);
-                                        obj.values = newMap;
-
-                                        inherit = obj.values.get("inherits");
-                                    }
-                                }
-                            }
-                            if (bundle.has("filament_config")) {
-                                JSONArray arr = bundle.getJSONArray("filament_config");
-                                List<String> names = new ArrayList<>();
-                                List<String> stripped = new ArrayList<>();
-                                for (int i = 0; i < arr.length(); i++) {
-                                    String v = arr.getString(i);
-                                    names.add(v);
-                                    stripped.add(v.substring(v.indexOf('/') + 1, v.length() - 5));
-                                }
-
-                                for (String name : names) {
-                                    w.filamentConfigs.add(IOUtils.configJsonToIni(new JSONObject(IOUtils.readString(zf.getInputStream(zf.getEntry(name)))), "filament", Slic3rConfigWrapper.FILAMENT_CONFIG_KEYS, stripped));
-                                }
-                                for (ConfigObject obj : w.filamentConfigs) {
-                                    String inherit = obj.get("inherits");
-                                    while (inherit != null) {
-                                        ConfigObject _obj = w.findFilament(inherit);
-                                        if (_obj == null) throw new IOUtils.MissingProfileException(inherit);
-
-                                        obj.values.remove("inherits");
-                                        HashMap<String, String> newMap = new HashMap<>();
-                                        newMap.putAll(_obj.values);
-                                        newMap.putAll(obj.values);
-                                        obj.values = newMap;
-
-                                        inherit = obj.values.get("inherits");
-                                    }
-                                }
-                            }
-                            if (bundle.has("printer_config")) {
-                                JSONArray arr = bundle.getJSONArray("printer_config");
-                                List<String> names = new ArrayList<>();
-                                List<String> stripped = new ArrayList<>();
-                                for (int i = 0; i < arr.length(); i++) {
-                                    String v = arr.getString(i);
-                                    names.add(v);
-                                    stripped.add(v.substring(v.indexOf('/') + 1));
-                                }
-
-                                for (String name : names) {
-                                    w.printerConfigs.add(IOUtils.configJsonToIni(new JSONObject(IOUtils.readString(zf.getInputStream(zf.getEntry(name)))), "machine", Slic3rConfigWrapper.PRINTER_CONFIG_KEYS, stripped));
-                                }
-                                for (ConfigObject obj : w.printerConfigs) {
-                                    String inherit = obj.get("inherits");
-                                    while (inherit != null) {
-                                        ConfigObject _obj = w.findPrinter(inherit);
-                                        if (_obj == null) throw new IOUtils.MissingProfileException(inherit);
-
-                                        obj.values.remove("inherits");
-                                        HashMap<String, String> newMap = new HashMap<>();
-                                        newMap.putAll(_obj.values);
-                                        newMap.putAll(obj.values);
-                                        obj.values = newMap;
-
-                                        inherit = obj.values.get("inherits");
-                                    }
-                                }
-                            }
-
-                            zf.close();
-
-                            loadIniForImport(new ByteArrayInputStream(w.serialize().getBytes(StandardCharsets.UTF_8)));
-                        } catch (Exception e) {
-                            ViewUtils.postOnMainThread(() -> {
-                                new BeamAlertDialogBuilder(this)
-                                        .setTitle(R.string.MenuFileImportProfilesFailed)
-                                        .setMessage(e.toString())
-                                        .setPositiveButton(android.R.string.ok, null)
-                                        .show();
-                            });
-                        }
-                    }).start();
+                    loadConvertedProfile(uri);
                     return;
                 }
 
@@ -417,6 +277,164 @@ public class MainActivity extends AppCompatActivity {
                             .setTitle(R.string.MenuFileImportProfilesFailed)
                             .setMessage(R.string.MenuFileImportProfilesFailedNotIni)
                             .setPositiveButton(android.R.string.ok, null)
+                            .show();
+                    return;
+                }
+
+                try {
+                    loadIniForImport(getContentResolver().openInputStream(uri));
+                } catch (FileNotFoundException e) {
+                    new BeamAlertDialogBuilder(this)
+                            .setTitle(R.string.MenuFileImportProfilesFailed)
+                            .setMessage(e.toString())
+                            .setPositiveButton(android.R.string.ok, null)
+                            .show();
+                }
+            }
+        }
+    }
+
+    private void loadConvertedProfile(Uri uri) {
+        String tag = UUID.randomUUID().toString();
+        SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.LOADING, R.string.OrcaConversionPleaseWait).tag(tag));
+        File f = new File(SliceBeam.getModelCacheDir(), "orca_conv.zip");
+        IOUtils.IO_POOL.submit(()->{
+            try {
+                InputStream in = getContentResolver().openInputStream(uri);
+                FileOutputStream fos = new FileOutputStream(f);
+                byte[] buffer = new byte[10240];
+                int c;
+                while ((c = in.read(buffer)) != -1) {
+                    fos.write(buffer, 0, c);
+                }
+                fos.close();
+                in.close();
+
+                ZipFile zf = new ZipFile(f);
+                JSONObject bundle = new JSONObject(IOUtils.readString(zf.getInputStream(zf.getEntry("bundle_structure.json"))));
+                if (!bundle.get("bundle_type").equals("printer config bundle")) {
+                    zf.close();
+
+                    SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(tag));
+                    ViewUtils.postOnMainThread(() -> new BeamAlertDialogBuilder(this)
+                            .setTitle(R.string.MenuFileImportProfilesFailed)
+                            .setMessage(R.string.OrcaConversionNotAConfigBundle)
+                            .setPositiveButton(android.R.string.ok, null)
+                            .show());
+
+                    return;
+                }
+
+                Slic3rConfigWrapper w = new Slic3rConfigWrapper();
+                if (bundle.has("process_config")) {
+                    JSONArray arr = bundle.getJSONArray("process_config");
+                    List<String> names = new ArrayList<>();
+                    List<String> stripped = new ArrayList<>();
+                    for (int i = 0; i < arr.length(); i++) {
+                        String v = arr.getString(i);
+                        names.add(v);
+                        stripped.add(v.substring(v.indexOf('/') + 1, v.length() - 5));
+                    }
+
+                    for (String name : names) {
+                        w.printConfigs.add(IOUtils.configJsonToIni(new JSONObject(IOUtils.readString(zf.getInputStream(zf.getEntry(name)))), "process", Slic3rConfigWrapper.PRINT_CONFIG_KEYS, stripped));
+                    }
+                    for (ConfigObject obj : w.printConfigs) {
+                        String inherit = obj.get("inherits");
+                        while (inherit != null) {
+                            ConfigObject _obj = w.findPrint(inherit);
+                            if (_obj == null) throw new IOUtils.MissingProfileException(inherit);
+
+                            obj.values.remove("inherits");
+                            HashMap<String, String> newMap = new HashMap<>();
+                            newMap.putAll(_obj.values);
+                            newMap.putAll(obj.values);
+                            obj.values = newMap;
+
+                            inherit = obj.values.get("inherits");
+                        }
+                    }
+                }
+                if (bundle.has("filament_config")) {
+                    JSONArray arr = bundle.getJSONArray("filament_config");
+                    List<String> names = new ArrayList<>();
+                    List<String> stripped = new ArrayList<>();
+                    for (int i = 0; i < arr.length(); i++) {
+                        String v = arr.getString(i);
+                        names.add(v);
+                        stripped.add(v.substring(v.indexOf('/') + 1, v.length() - 5));
+                    }
+
+                    for (String name : names) {
+                        w.filamentConfigs.add(IOUtils.configJsonToIni(new JSONObject(IOUtils.readString(zf.getInputStream(zf.getEntry(name)))), "filament", Slic3rConfigWrapper.FILAMENT_CONFIG_KEYS, stripped));
+                    }
+                    for (ConfigObject obj : w.filamentConfigs) {
+                        String inherit = obj.get("inherits");
+                        while (inherit != null) {
+                            ConfigObject _obj = w.findFilament(inherit);
+                            if (_obj == null) throw new IOUtils.MissingProfileException(inherit);
+
+                            obj.values.remove("inherits");
+                            HashMap<String, String> newMap = new HashMap<>();
+                            newMap.putAll(_obj.values);
+                            newMap.putAll(obj.values);
+                            obj.values = newMap;
+
+                            inherit = obj.values.get("inherits");
+                        }
+                    }
+                }
+                if (bundle.has("printer_config")) {
+                    JSONArray arr = bundle.getJSONArray("printer_config");
+                    List<String> names = new ArrayList<>();
+                    List<String> stripped = new ArrayList<>();
+                    for (int i = 0; i < arr.length(); i++) {
+                        String v = arr.getString(i);
+                        names.add(v);
+                        stripped.add(v.substring(v.indexOf('/') + 1));
+                    }
+
+                    for (String name : names) {
+                        w.printerConfigs.add(IOUtils.configJsonToIni(new JSONObject(IOUtils.readString(zf.getInputStream(zf.getEntry(name)))), "machine", Slic3rConfigWrapper.PRINTER_CONFIG_KEYS, stripped));
+                    }
+                    for (ConfigObject obj : w.printerConfigs) {
+                        String inherit = obj.get("inherits");
+                        while (inherit != null) {
+                            ConfigObject _obj = w.findPrinter(inherit);
+                            if (_obj == null) throw new IOUtils.MissingProfileException(inherit);
+
+                            obj.values.remove("inherits");
+                            HashMap<String, String> newMap = new HashMap<>();
+                            newMap.putAll(_obj.values);
+                            newMap.putAll(obj.values);
+                            obj.values = newMap;
+
+                            inherit = obj.values.get("inherits");
+                        }
+                    }
+                }
+
+                zf.close();
+
+                SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(tag));
+                loadIniForImport(new ByteArrayInputStream(w.serialize().getBytes(StandardCharsets.UTF_8)));
+            } catch (IOUtils.MissingProfileException ep) {
+                SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(tag));
+                ViewUtils.postOnMainThread(() -> new BeamAlertDialogBuilder(this)
+                        .setTitle(R.string.MenuFileImportProfilesFailed)
+                        .setMessage(getString(R.string.MenuFileImportProfilesFailedBaseProfileNotFound, ep.profile))
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show());
+            } catch (Exception e) {
+                SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(tag));
+                ViewUtils.postOnMainThread(() -> new BeamAlertDialogBuilder(this)
+                        .setTitle(R.string.MenuFileImportProfilesFailed)
+                        .setMessage(e.toString())
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show());
+            }
+        });
+    }
                             .show();
                     return;
                 }
@@ -435,7 +453,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadIniForImport(InputStream in) {
-        new Thread(()->{
+        IOUtils.IO_POOL.submit(()->{
             try {
                 Slic3rConfigWrapper w = new Slic3rConfigWrapper(in);
 
@@ -461,39 +479,68 @@ public class MainActivity extends AppCompatActivity {
                         enabledPrinters[i] = true;
                     }
 
-                    new BeamAlertDialogBuilder(this)
-                            .setTitle(R.string.MenuFileExportProfilesPrints)
-                            .setMultiChoiceItems(prints, enabledPrints, (dialog, which, isChecked) -> enabledPrints[which] = isChecked)
-                            .setPositiveButton(android.R.string.ok, (d1, w1) -> new BeamAlertDialogBuilder(this)
-                                    .setTitle(R.string.MenuFileExportProfilesFilaments)
-                                    .setMultiChoiceItems(filaments, enabledFilaments, (dialog, which, isChecked) -> enabledFilaments[which] = isChecked)
-                                    .setPositiveButton(android.R.string.ok, (d2, w2) -> new BeamAlertDialogBuilder(this)
-                                            .setTitle(R.string.MenuFileExportProfilesPrinters)
-                                            .setMultiChoiceItems(printers, enabledPrinters, (dialog, which, isChecked) -> enabledPrinters[which] = isChecked)
-                                            .setPositiveButton(android.R.string.ok, (d3, w3) -> {
-                                                for (int i = 0; i < enabledPrints.length; i++) {
-                                                    if (enabledPrints[i]) {
-                                                        SliceBeam.CONFIG.importPrint(w.printConfigs.get(i));
-                                                    }
-                                                }
-                                                for (int i = 0; i < enabledFilaments.length; i++) {
-                                                    if (enabledFilaments[i]) {
-                                                        SliceBeam.CONFIG.importFilament(w.filamentConfigs.get(i));
-                                                    }
-                                                }
-                                                for (int i = 0; i < enabledPrinters.length; i++) {
-                                                    if (enabledPrinters[i]) {
-                                                        SliceBeam.CONFIG.importPrinter(w.printerConfigs.get(i));
-                                                    }
-                                                }
-                                                SliceBeam.saveConfig();
-                                            })
-                                            .setNegativeButton(android.R.string.cancel, null)
-                                            .show())
-                                    .setNegativeButton(android.R.string.cancel, null)
-                                    .show())
-                            .setNegativeButton(android.R.string.cancel, null)
-                            .show();
+                    if (prints.length == 0 && filaments.length == 0 && printers.length == 0) {
+                        ViewUtils.postOnMainThread(() -> new BeamAlertDialogBuilder(this)
+                                .setTitle(R.string.MenuFileImportProfilesFailed)
+                                .setMessage(R.string.MenuFileImportProfilesFailedEmpty)
+                                .setPositiveButton(android.R.string.ok, null)
+                                .show());
+                        return;
+                    }
+
+                    Runnable finish = () -> {
+                        for (int i = 0; i < enabledPrints.length; i++) {
+                            if (enabledPrints[i]) {
+                                SliceBeam.CONFIG.importPrint(w.printConfigs.get(i));
+                            }
+                        }
+                        for (int i = 0; i < enabledFilaments.length; i++) {
+                            if (enabledFilaments[i]) {
+                                SliceBeam.CONFIG.importFilament(w.filamentConfigs.get(i));
+                            }
+                        }
+                        for (int i = 0; i < enabledPrinters.length; i++) {
+                            if (enabledPrinters[i]) {
+                                SliceBeam.CONFIG.importPrinter(w.printerConfigs.get(i));
+                            }
+                        }
+                        SliceBeam.saveConfig();
+                    };
+                    Runnable printersRun = () -> {
+                        if (printers.length == 0) {
+                            finish.run();
+                            return;
+                        }
+
+                        new BeamAlertDialogBuilder(this)
+                                .setTitle(R.string.MenuFileExportProfilesPrinters)
+                                .setMultiChoiceItems(printers, enabledPrinters, (dialog, which, isChecked) -> enabledPrinters[which] = isChecked)
+                                .setPositiveButton(android.R.string.ok, (d3, w3) -> finish.run())
+                                .setNegativeButton(android.R.string.cancel, null)
+                                .show();
+                    };
+                    Runnable filamentsRun = () -> {
+                        if (filaments.length == 0) {
+                            printersRun.run();
+                            return;
+                        }
+                        new BeamAlertDialogBuilder(this)
+                                .setTitle(R.string.MenuFileExportProfilesFilaments)
+                                .setMultiChoiceItems(filaments, enabledFilaments, (dialog, which, isChecked) -> enabledFilaments[which] = isChecked)
+                                .setPositiveButton(android.R.string.ok, (d2, w2) -> printersRun.run())
+                                .setNegativeButton(android.R.string.cancel, null)
+                                .show();
+                    };
+                    if (prints.length == 0) {
+                        filamentsRun.run();
+                    } else {
+                        new BeamAlertDialogBuilder(this)
+                                .setTitle(R.string.MenuFileExportProfilesPrints)
+                                .setMultiChoiceItems(prints, enabledPrints, (dialog, which, isChecked) -> enabledPrints[which] = isChecked)
+                                .setPositiveButton(android.R.string.ok, (d1, w1) -> filamentsRun.run())
+                                .setNegativeButton(android.R.string.cancel, null)
+                                .show();
+                    }
                 });
             } catch (Exception e) {
                 Log.e("MainActivity", "Failed to read file", e);
@@ -504,7 +551,7 @@ public class MainActivity extends AppCompatActivity {
                         .setPositiveButton(android.R.string.ok, null)
                         .show());
             }
-        }).start();
+        });
     }
 
     private void loadFile(File f, boolean autoorient) {
@@ -521,27 +568,36 @@ public class MainActivity extends AppCompatActivity {
                     } else {
                         fragment.loadModel(f);
                     }
-                    fragment.getGlView().queueEvent(() -> {
-                        if (!gcode) {
-                            SliceBeam.EVENT_BUS.fireEvent(new ObjectsListChangedEvent());
-                        }
-                        Model model = fragment.getGlView().getRenderer().getModel();
-                        int i = model.getObjectsCount() - 1;
-                        if (autoorient) {
-                            model.autoOrient(i);
-                            fragment.getGlView().getRenderer().invalidateGlModel(i);
-                            fragment.getGlView().requestRender();
-                        }
-                        SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(tag));
-                        SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(R.string.MenuFileOpenFileLoaded));
-                        if (model.isBigObject(i)) {
-                            SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.WARNING, R.string.MenuFileOpenFileBigObject));
+                    fragment.getGlView().queueEvent(new Runnable() {
+                        @Override
+                        public void run() {
+                            Model model = fragment.getGlView().getRenderer().getModel();
+                            if (model == null || fragment.getGlView().getRenderer().getBed() == null) {
+                                fragment.getGlView().queueEvent(this);
+                                return;
+                            }
+
+                            if (!gcode) {
+                                SliceBeam.EVENT_BUS.fireEvent(new ObjectsListChangedEvent());
+                            }
+                            int i = model.getObjectsCount() - 1;
+                            if (autoorient) {
+                                model.autoOrient(i);
+                                fragment.getGlView().getRenderer().invalidateGlModel(i);
+                                fragment.getGlView().requestRender();
+                            }
+                            SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(tag));
+                            SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(R.string.MenuFileOpenFileLoaded));
+                            if (model.isBigObject(i)) {
+                                SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.WARNING, R.string.MenuFileOpenFileBigObject));
+                            }
                         }
                     });
                 } catch (Slic3rRuntimeError e) {
                     Log.e("MainActivity", "Failed to load model", e);
                     f.delete();
 
+                    SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(tag));
                     ViewUtils.postOnMainThread(() -> new BeamAlertDialogBuilder(this)
                             .setTitle(R.string.MenuFileOpenFileFailed)
                             .setMessage(e.toString())
@@ -556,20 +612,7 @@ public class MainActivity extends AppCompatActivity {
         if (uri == null) return;
 
         ContentResolver resolver = getContentResolver();
-
-        String[] projection = {MediaStore.MediaColumns.DISPLAY_NAME};
-        Cursor metaCursor = resolver.query(uri, projection, null, null, null);
-        String fileName = null;
-        if (metaCursor != null) {
-            try {
-                if (metaCursor.moveToFirst()) {
-                    fileName = metaCursor.getString(0);
-                }
-            } finally {
-                metaCursor.close();
-            }
-        }
-
+        String fileName = IOUtils.getDisplayName(uri);
         if (fileName == null) {
             new BeamAlertDialogBuilder(this)
                     .setTitle(R.string.MenuFileOpenFileFailed)
@@ -578,9 +621,26 @@ public class MainActivity extends AppCompatActivity {
                     .show();
             return;
         }
+        if (fileName.endsWith(".orca_printer")) {
+            loadConvertedProfile(uri);
+            return;
+        }
+        if (fileName.endsWith(".ini")) {
+            try {
+                loadIniForImport(resolver.openInputStream(uri));
+            } catch (FileNotFoundException e) {
+                new BeamAlertDialogBuilder(this)
+                        .setTitle(R.string.MenuFileImportProfilesFailed)
+                        .setMessage(e.toString())
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show();
+            }
+            return;
+        }
+
         File f = new File(SliceBeam.getModelCacheDir(), fileName);
         // TODO: Check if file already exists
-        new Thread(()->{
+        IOUtils.IO_POOL.submit(()->{
             try {
                 InputStream in = resolver.openInputStream(uri);
                 FileOutputStream fos = new FileOutputStream(f);
@@ -601,7 +661,7 @@ public class MainActivity extends AppCompatActivity {
                         .setPositiveButton(android.R.string.ok, null)
                         .show());
             }
-        }).start();
+        });
     }
 
     @Override

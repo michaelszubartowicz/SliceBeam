@@ -35,12 +35,15 @@
     <string name="MenuFileCalibrationsModelsSphere">Sphere</string>
     <string name="MenuFileImportProfiles">Import profiles</string>
     <string name="MenuFileImportProfilesFailed">Import failed</string>
+    <string name="MenuFileImportProfilesFailedBaseProfileNotFound">Parent profile not found: %s</string>
     <string name="MenuFileImportProfilesFailedNotIni">Not an .ini file</string>
+    <string name="MenuFileImportProfilesFailedEmpty">File does not contain profiles</string>
     <string name="MenuFileExportProfiles">Export profiles</string>
     <string name="MenuFileExportProfilesPrints">Print configs</string>
     <string name="MenuFileExportProfilesFilaments">Filaments</string>
     <string name="MenuFileExportProfilesPrinters">Printers</string>
     <string name="MenuFileExportProfilesNoProfiles">No profiles selected.</string>
+    <string name="MenuFileExportProfilesSuccess">Exported profiles successfully.</string>
     <string name="MenuCamera">Camera</string>
     <string name="MenuCameraIsometric">Isom. view</string>
     <string name="MenuCameraTop">Top view</string>
@@ -51,6 +54,7 @@
     <string name="MenuCameraRight">Right view</string>
     <string name="MenuCameraOrtho">Orth. project.</string>
     <string name="MenuCameraControlMode">Control mode</string>
+    <string name="MenuCameraControlModeFull">Control mode</string>
     <string name="MenuCameraControlModeOne">One finger - rotation, two fingers - movement</string>
     <string name="MenuCameraControlModeTwo">One finger - movement, two fingers - rotation</string>
     <string name="MenuCameraControlModeThree">Only movement</string>
@@ -101,7 +105,7 @@
     <string name="MenuSliceShare">Share</string>
     <string name="MenuSliceSendToPrinter">Send to printer</string>
     <string name="MenuSliceSendToPrinterAndPrint">Send and print</string>
-    <string name="MenuSliceSendToPrinterStarted">Upload started…</string>
+    <string name="MenuSliceSendToPrinterLoading">Uploading…</string>
     <string name="MenuSliceSendToPrinterOK">File sent to printer.</string>
     <string name="MenuSliceSendToPrinterPrintStarted">File sent, starting print…</string>
     <string name="MenuSliceSendToPrinterFailed">Failed to send file</string>
