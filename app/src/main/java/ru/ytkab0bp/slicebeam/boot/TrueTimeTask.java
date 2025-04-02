@@ -9,7 +9,7 @@ public class TrueTimeTask extends BootTask {
         super(() -> {
             for (int i = 0; i < 2; i++) {
                 try {
-                    TrueTime.build().withNtpHost("1.ru.pool.ntp.org").initialize();
+                    TrueTime.build().withNtpHost("1.ru.pool.ntp.org").withConnectionTimeout(300).initialize();
                     break;
                 } catch (IOException ignore) {
                     try {
@@ -19,5 +19,6 @@ public class TrueTimeTask extends BootTask {
             }
         });
         onWorker();
+        nonCritical = true;
     }
 }

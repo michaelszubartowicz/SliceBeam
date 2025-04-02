@@ -8,6 +8,7 @@ public class BootTask {
     public final Runnable run;
     public boolean workerThread;
     public int priority;
+    public boolean nonCritical;
 
     /* package */ int index;
 

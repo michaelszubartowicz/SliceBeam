@@ -22,7 +22,17 @@ public class AppBoot {
     public static void run(List<BootTask> tasks) {
         long start = System.currentTimeMillis();
         AppBoot.tasks = tasks;
-        AppBoot.latch = new CountDownLatch(tasks.size());
+        int size = tasks.size();
+        for (int i = 0, s = tasks.size(); i < s; i++) {
+            BootTask task = tasks.get(i);
+            if (task.nonCritical) {
+                if (!task.workerThread) {
+                    throw new IllegalArgumentException("Can't schedule non-critical task on main thread");
+                }
+                size--;
+            }
+        }
+        AppBoot.latch = new CountDownLatch(size);
 
         for (int i = 0, s = tasks.size(); i < s; i++) {
             BootTask task = tasks.get(i);
@@ -40,14 +50,21 @@ public class AppBoot {
                 }
             }
             Log.d("boot", "Boot in " + (System.currentTimeMillis() - start) + "ms");
+            tryShutdown();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void tryShutdown() {
+        if (completed.size() == tasks.size()) {
             executor.shutdown();
             executor = null;
+            tasks = null;
             pendingMain = null;
             pendingTasks = null;
             completed = null;
             latch = null;
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
         }
     }
 
@@ -57,7 +74,11 @@ public class AppBoot {
                 executor.submit(() -> {
                     task.run.run();
                     completed.put(task.index, true);
-                    latch.countDown();
+                    if (!task.nonCritical) {
+                        latch.countDown();
+                    } else {
+                        tryShutdown();
+                    }
 
                     if (!isContinue) {
                         continueTasks(fromMain);
@@ -67,7 +88,11 @@ public class AppBoot {
                 Runnable r = () -> {
                     task.run.run();
                     completed.put(task.index, true);
-                    latch.countDown();
+                    if (!task.nonCritical) {
+                        latch.countDown();
+                    } else {
+                        tryShutdown();
+                    }
 
                     if (!isContinue) {
                         continueTasks(fromMain);

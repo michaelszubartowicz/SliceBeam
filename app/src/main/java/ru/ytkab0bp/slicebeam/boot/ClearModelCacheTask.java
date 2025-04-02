@@ -15,6 +15,7 @@ public class ClearModelCacheTask extends BootTask {
                 }
             }
         });
+        nonCritical = true;
         onWorker();
     }
 }
