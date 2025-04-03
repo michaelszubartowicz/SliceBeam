@@ -308,7 +308,7 @@ public class BedFragment extends Fragment {
 
             @Override
             public void onPageFinished(WebView view, String url) {
-                panelWebView.animate().alpha(0).setDuration(150).start();
+                panelWebView.animate().alpha(1).setDuration(150).start();
                 webViewProgressBar.animate().alpha(0).setDuration(150).start();
             }
         });
