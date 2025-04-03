@@ -75,7 +75,7 @@ public abstract class ProfileListFragment extends Fragment {
     protected ImageView resetButton;
     protected BeamButton saveButton;
 
-    protected boolean changedConfig;
+    protected ConfigObject diffObject = new ConfigObject();
 
     private List<OptionWrapper> currentList = Collections.emptyList();
     private SparseArray<List<OptionWrapper>> categoryElements = new SparseArray<>();
@@ -332,21 +332,45 @@ public abstract class ProfileListFragment extends Fragment {
         saveButton.setPadding(ViewUtils.dp(21), ViewUtils.dp(12), ViewUtils.dp(21), ViewUtils.dp(12));
 
         saveButton.setOnClickListener(v -> {
-            FrameLayout fl = new FrameLayout(ctx);
+            LinearLayout linear = new LinearLayout(ctx);
+            linear.setOrientation(LinearLayout.VERTICAL);
+
+            StringBuilder sb = new StringBuilder();
+            for (Map.Entry<String, String> en : diffObject.values.entrySet()) {
+                if (sb.length() > 0) {
+                    sb.append("\n");
+                }
+                ConfigOptionDef def = PrintConfigDef.getInstance().options.get(en.getKey());
+                sb.append(Slic3rLocalization.getString(def.getFullLabel())).append(" - ").append(opt(def, -1));
+            }
+
+            if (sb.length() > 0) {
+                ScrollView scrollView = new ScrollView(ctx);
+                TextView subtitle = new TextView(ctx);
+                subtitle.setTextAppearance(ctx, com.google.android.material.R.style.MaterialAlertDialog_Material3_Body_Text);
+                subtitle.setTextColor(ThemesRepo.getColor(android.R.attr.textColorSecondary));
+                subtitle.setText(sb.toString());
+                subtitle.setPadding(ViewUtils.dp(24), ViewUtils.dp(12), ViewUtils.dp(24), ViewUtils.dp(12));
+                scrollView.addView(subtitle, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                linear.addView(scrollView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+            }
+
             EditText text = new EditText(ctx);
             text.setText(getCurrentConfig().getTitle());
             text.setTextColor(ThemesRepo.getColor(android.R.attr.textColorPrimary));
-            fl.addView(text, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT) {{
+            linear.addView(text, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT) {{
                 leftMargin = rightMargin = ViewUtils.dp(21);
             }});
 
             AlertDialog dialog = new BeamAlertDialogBuilder(ctx)
                     .setTitle(R.string.SettingsSaveTitle)
-                    // TODO: Draw settings delta
-                    .setView(fl)
+                    .setView(linear)
                     .setPositiveButton(android.R.string.ok, (d, which) -> {
+                        getCurrentConfig().values.putAll(diffObject.values);
+                        diffObject.values.clear();
+
                         onApplyConfig(text.getText().toString());
-                        resetButton.animate().alpha(0.6f).start();
+                        resetButton.animate().alpha(0.4f).setDuration(150).start();
                         resetButton.setClickable(false);
                         onUpdateConfigItems();
                     })
@@ -395,13 +419,14 @@ public abstract class ProfileListFragment extends Fragment {
         resetButton.setImageResource(R.drawable.refresh_outline_28);
         resetButton.setImageTintList(ColorStateList.valueOf(ThemesRepo.getColor(android.R.attr.textColorPrimary)));
         resetButton.setScaleX(-1f);
-        resetButton.setAlpha(0.6f);
+        resetButton.setAlpha(0.4f);
         resetButton.setOnClickListener(v -> new BeamAlertDialogBuilder(ctx)
                 .setTitle(R.string.SettingsResetProfileTitle)
                 .setMessage(R.string.SettingsResetProfileDescription)
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                     onResetConfig();
-                    resetButton.animate().alpha(0.6f).start();
+                    diffObject.values.clear();
+                    resetButton.animate().alpha(0.4f).setDuration(150).start();
                     resetButton.setClickable(false);
                     onUpdateConfigItems();
                 })
@@ -475,7 +500,11 @@ public abstract class ProfileListFragment extends Fragment {
     }
 
     private String opt(ConfigOptionDef def, int i) {
-        String v = getCurrentConfig().get(def.key);
+        return opt(def, i, false);
+    }
+
+    private String opt(ConfigOptionDef def, int i, boolean ignoreDiff) {
+        String v = ignoreDiff || !diffObject.has(def.key) ? getCurrentConfig().get(def.key) : diffObject.get(def.key);
         if (i != -1) {
             try {
                 String ch = ",";
@@ -492,17 +521,25 @@ public abstract class ProfileListFragment extends Fragment {
         if (i != -1) {
             String ch = ",";
             if (def.guiType == ConfigOptionDef.GUIType.COLOR) ch = ";";
-            String[] vals = opt(def, -1).split(ch);
+            String[] vals = opt(def, -1, true).split(ch);
             vals[i] = value;
             value = TextUtils.join(ch, vals);
         }
 
-        if (!Objects.equals(opt(def, i), value)) {
-            changedConfig = true;
-            resetButton.animate().alpha(1).start();
-            resetButton.setClickable(true);
+        boolean wasEmpty = diffObject.values.isEmpty();
+        if (Objects.equals(opt(def, i, true), value)) {
+            diffObject.remove(def.key);
+        } else {
+            diffObject.put(def.key, value);
         }
-        getCurrentConfig().put(def.key, value);
+        boolean empty = diffObject.values.isEmpty();
+        if (wasEmpty && !empty) {
+            resetButton.animate().alpha(1.0f).setDuration(150).start();
+            resetButton.setClickable(true);
+        } else if (!wasEmpty && empty) {
+            resetButton.animate().alpha(0.4f).setDuration(150).start();
+            resetButton.setClickable(false);
+        }
     }
 
     @SuppressLint("NotifyDataSetChanged")

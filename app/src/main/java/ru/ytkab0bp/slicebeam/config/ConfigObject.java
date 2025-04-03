@@ -41,8 +41,16 @@ public class ConfigObject implements ProfileListFragment.ProfileListItem {
         return get("nozzle_diameter") != null ? get("nozzle_diameter").replaceAll("[^.]+", "").length() : 1;
     }
 
+    public boolean has(String key) {
+        return values.containsKey(key);
+    }
+
     public String get(String key) {
         return values.get(key);
+    }
+
+    public void remove(String key) {
+        values.remove(key);
     }
 
     public void put(String key, String value) {
