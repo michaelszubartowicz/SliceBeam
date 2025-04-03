@@ -13,7 +13,7 @@
     <string name="MenuFileOpenFileLoaded">Файл загружен.</string>
     <string name="MenuFileOpenFileFailed">Не удалось открыть модель</string>
     <string name="MenuFileOpenFileFailedNullName">Не удалось определить имя файла.</string>
-    <string name="MenuFileOpenFileBigObject">Файл содержит более 100к треугольников. Нарезка может быть очень медленной.</string>
+    <string name="MenuFileOpenFileBigObject">Файл содержит более 500к треугольников. Нарезка может быть медленной.</string>
     <string name="MenuFileOpenFileLoading">Загрузка файла…</string>
     <string name="MenuFileDelete">Убрать модель</string>
     <string name="MenuFileCalibrations">Калибров.</string>

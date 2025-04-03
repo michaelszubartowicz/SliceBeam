@@ -370,14 +370,15 @@ public class SetupActivity extends AppCompatActivity {
         backgroundView.setEGLContextClientVersion(3);
         backgroundView.setRenderer(new GLSurfaceView.Renderer() {
             @Override
-            public void onSurfaceCreated(GL10 gl, EGLConfig config) {
-                backgroundModel = new GLModel();
-                backgroundModel.initBackgroundTriangles();
-            }
+            public void onSurfaceCreated(GL10 gl, EGLConfig config) {}
 
             @Override
             public void onSurfaceChanged(GL10 gl, int width, int height) {
                 glViewport(0, 0, width, height);
+                if (backgroundModel == null) {
+                    backgroundModel = new GLModel();
+                    backgroundModel.initBackgroundTriangles();
+                }
             }
 
             private float time;

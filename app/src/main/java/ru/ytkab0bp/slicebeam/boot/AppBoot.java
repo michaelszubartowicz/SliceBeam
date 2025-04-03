@@ -11,7 +11,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import ru.ytkab0bp.slicebeam.BuildConfig;
+
 public class AppBoot {
+    private final static String TAG = "boot";
+
     static ExecutorService executor = Executors.newCachedThreadPool();
     static List<BootTask> tasks;
     static List<Runnable> pendingMain = new ArrayList<>();
@@ -49,7 +53,9 @@ public class AppBoot {
                     pendingMain.removeAll(clone);
                 }
             }
-            Log.d("boot", "Boot in " + (System.currentTimeMillis() - start) + "ms");
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "Boot in " + (System.currentTimeMillis() - start) + "ms");
+            }
             tryShutdown();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
@@ -70,34 +76,29 @@ public class AppBoot {
 
     private static void tryRunTask(BootTask task, boolean fromMain, boolean isContinue) {
         if (checkDependencies(task.dependencies)) {
+            Runnable r = () -> {
+                try {
+                    task.run.run();
+                } catch (Exception e) {
+                    Log.e(TAG, "Error while executing boot task", e);
+                }
+                completed.put(task.index, true);
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "Finish " + task);
+                }
+                if (!task.nonCritical) {
+                    latch.countDown();
+                } else {
+                    tryShutdown();
+                }
+
+                if (!isContinue) {
+                    continueTasks(fromMain);
+                }
+            };
             if (task.workerThread) {
-                executor.submit(() -> {
-                    task.run.run();
-                    completed.put(task.index, true);
-                    if (!task.nonCritical) {
-                        latch.countDown();
-                    } else {
-                        tryShutdown();
-                    }
-
-                    if (!isContinue) {
-                        continueTasks(fromMain);
-                    }
-                });
+                executor.submit(r);
             } else {
-                Runnable r = () -> {
-                    task.run.run();
-                    completed.put(task.index, true);
-                    if (!task.nonCritical) {
-                        latch.countDown();
-                    } else {
-                        tryShutdown();
-                    }
-
-                    if (!isContinue) {
-                        continueTasks(fromMain);
-                    }
-                };
                 if (fromMain) {
                     r.run();
                 } else {

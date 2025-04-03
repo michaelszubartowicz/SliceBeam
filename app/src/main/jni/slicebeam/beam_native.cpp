@@ -820,7 +820,7 @@ extern "C" {
     JNIEXPORT jboolean JNICALL Java_ru_ytkab0bp_slicebeam_slic3r_Native_model_1is_1big_1object(JNIEnv* env, jclass, jlong ptr, jint i) {
         ModelRef* model = (ModelRef*) (intptr_t) ptr;
         ModelObject* obj = model->model.objects[i];
-        return obj->volumes.size() == 1 && obj->volumes.front()->mesh().its.indices.size() >= 100000;
+        return obj->volumes.size() == 1 && obj->volumes.front()->mesh().its.indices.size() >= 500000;
     }
 
     JNIEXPORT jint JNICALL Java_ru_ytkab0bp_slicebeam_slic3r_Native_model_1get_1extruder(JNIEnv* env, jclass, jlong ptr, jint i) {

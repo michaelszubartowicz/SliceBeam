@@ -14,7 +14,7 @@
     <string name="MenuFileOpenFileLoaded">File loaded.</string>
     <string name="MenuFileOpenFileFailed">Failed to open model</string>
     <string name="MenuFileOpenFileFailedNullName">Failed to resolve file name.</string>
-    <string name="MenuFileOpenFileBigObject">File has more than 100k triangles. Processing could be really slow.</string>
+    <string name="MenuFileOpenFileBigObject">File has more than 500k triangles. Processing could be slow.</string>
     <string name="MenuFileOpenFileLoading">Loading file…</string>
     <string name="MenuFileDelete">Remove model</string>
     <string name="MenuFileCalibrations">Calibrat.</string>

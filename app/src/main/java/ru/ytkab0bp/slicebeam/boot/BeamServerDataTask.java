@@ -6,6 +6,7 @@ import org.json.JSONObject;
 import ru.ytkab0bp.slicebeam.BeamServerData;
 import ru.ytkab0bp.slicebeam.SliceBeam;
 import ru.ytkab0bp.slicebeam.utils.Prefs;
+import ru.ytkab0bp.slicebeam.utils.ViewUtils;
 
 public class BeamServerDataTask extends BootTask {
     public BeamServerDataTask() {
@@ -16,7 +17,7 @@ public class BeamServerDataTask extends BootTask {
                 throw new RuntimeException(e);
             }
             if (System.currentTimeMillis() - Prefs.getLastCheckedInfo() >= 86400000L) {
-                BeamServerData.load();
+                ViewUtils.postOnMainThread(BeamServerData::load);
             }
         });
         onWorker();

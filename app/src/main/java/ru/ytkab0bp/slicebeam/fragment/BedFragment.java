@@ -1,18 +1,30 @@
 package ru.ytkab0bp.slicebeam.fragment;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.os.Process;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.SparseArray;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import androidx.dynamicanimation.animation.FloatValueHolder;
 import androidx.dynamicanimation.animation.SpringAnimation;
@@ -105,6 +117,10 @@ public class BedFragment extends Fragment {
 
     private BedSwipeDownLayout swipeDownLayout;
     private WebView panelWebView;
+    private LinearLayout panelWebViewError;
+    private ImageView webViewErrIcon;
+    private TextView webViewErrDescription;
+    private ProgressBar webViewProgressBar;
 
     private static String tempFileName;
     private static File tempExportingFile;
@@ -228,7 +244,15 @@ public class BedFragment extends Fragment {
             if (!host.startsWith("http://")) {
                 host = "http://" + host;
             }
+            webViewProgressBar.animate().alpha(1).setDuration(150).start();
+            panelWebView.setAlpha(0f);
             panelWebView.loadUrl(host);
+            panelWebViewError.animate().alpha(0).setDuration(150).setListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    panelWebViewError.setVisibility(View.GONE);
+                }
+            }).start();
         }
     }
 
@@ -272,6 +296,44 @@ public class BedFragment extends Fragment {
         swipeDownLayout = new BedSwipeDownLayout(ctx);
         panelWebView = new WebView(ctx);
         panelWebView.getSettings().setJavaScriptEnabled(true);
+        panelWebView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                webViewErrDescription.setText(description);
+                panelWebViewError.setVisibility(View.VISIBLE);
+                panelWebViewError.setAlpha(0f);
+                panelWebViewError.animate().alpha(1).setDuration(150).setListener(null).start();
+                webViewProgressBar.animate().alpha(0).setDuration(150).start();
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                panelWebView.animate().alpha(0).setDuration(150).start();
+                webViewProgressBar.animate().alpha(0).setDuration(150).start();
+            }
+        });
+
+        FrameLayout wfl = new FrameLayout(ctx);
+        wfl.addView(panelWebView, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        panelWebViewError = new LinearLayout(ctx);
+        panelWebViewError.setVisibility(View.GONE);
+        panelWebViewError.setOrientation(LinearLayout.VERTICAL);
+        panelWebViewError.setGravity(Gravity.CENTER);
+        panelWebViewError.setPadding(ViewUtils.dp(12), ViewUtils.dp(12), ViewUtils.dp(12), ViewUtils.dp(12));
+        webViewErrIcon = new ImageView(ctx);
+        webViewErrIcon.setImageResource(R.drawable.globe_cross_outline_28);
+        panelWebViewError.addView(webViewErrIcon, new LinearLayout.LayoutParams(ViewUtils.dp(28), ViewUtils.dp(28)) {{
+            bottomMargin = ViewUtils.dp(8);
+        }});
+        webViewErrDescription = new TextView(ctx);
+        webViewErrDescription.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        webViewErrDescription.setGravity(Gravity.CENTER);
+        panelWebViewError.addView(webViewErrDescription);
+        wfl.addView(panelWebViewError, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        webViewProgressBar = new ProgressBar(ctx);
+        webViewProgressBar.setAlpha(0f);
+        wfl.addView(webViewProgressBar, new FrameLayout.LayoutParams(ViewUtils.dp(36), ViewUtils.dp(36), Gravity.CENTER));
 
         if (portrait) {
             LinearLayout inner = new LinearLayout(ctx);
@@ -280,10 +342,10 @@ public class BedFragment extends Fragment {
 
             inner.addView(glView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
             swipeDownLayout.addView(inner);
-            swipeDownLayout.addView(panelWebView);
+            swipeDownLayout.addView(wfl);
         } else {
             swipeDownLayout.addView(glView);
-            swipeDownLayout.addView(panelWebView);
+            swipeDownLayout.addView(wfl);
             ll.addView(swipeDownLayout, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
         }
 
@@ -536,6 +598,9 @@ public class BedFragment extends Fragment {
     public void onApplyTheme() {
         super.onApplyTheme();
 
+        webViewErrIcon.setImageTintList(ColorStateList.valueOf(ThemesRepo.getColor(android.R.attr.textColorSecondary)));
+        webViewErrDescription.setTextColor(ThemesRepo.getColor(android.R.attr.textColorSecondary));
+        webViewProgressBar.setIndeterminateTintList(ColorStateList.valueOf(ThemesRepo.getColor(android.R.attr.textColorSecondary)));
         menuView.setBackgroundColor(ThemesRepo.getColor(android.R.attr.windowBackground));
         for (int i = 0; i < MenuCategory.values().length; i++) {
             if (i != currentMenuSlot) {
