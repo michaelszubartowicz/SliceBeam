@@ -1401,6 +1401,19 @@ extern "C" {
         bed_util_init_contourlines(ref->contour, ref->contourlines);
     }
 
+    JNIEXPORT void JNICALL Java_ru_ytkab0bp_slicebeam_slic3r_Native_bed_1init_1triangles_1mesh(JNIEnv* env, jclass, jlong ptr, jlong triangles_ptr) {
+        auto ref = reinterpret_cast<BedRef*>(ptr);
+        auto tRef = reinterpret_cast<GLModelRef*>(triangles_ptr);
+
+        auto contour = ref->contour;
+        BoundingBox bb = get_extents(contour);
+        Point center = bb.center();
+        float scaleFactor = 4;
+        contour.scale(scaleFactor);
+        contour.translate(-center.x() * scaleFactor * 0.5f, -center.y() * scaleFactor * 0.5f);
+        bed_util_init_triangles_its(contour, &tRef->mesh.its);
+    }
+
     JNIEXPORT jboolean JNICALL Java_ru_ytkab0bp_slicebeam_slic3r_Native_bed_1arrange(JNIEnv* env, jclass, jlong ptr, jlong model) {
         BedRef* ref = (BedRef*) (intptr_t) ptr;
         ModelRef* mRef = (ModelRef*) (intptr_t) model;

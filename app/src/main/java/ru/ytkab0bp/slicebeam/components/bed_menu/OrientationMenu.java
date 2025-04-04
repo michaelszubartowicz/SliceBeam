@@ -31,6 +31,7 @@ import ru.ytkab0bp.slicebeam.SliceBeam;
 import ru.ytkab0bp.slicebeam.components.BeamAlertDialogBuilder;
 import ru.ytkab0bp.slicebeam.components.UnfoldMenu;
 import ru.ytkab0bp.slicebeam.events.FlattenModeResetEvent;
+import ru.ytkab0bp.slicebeam.events.LongClickTranslationEvent;
 import ru.ytkab0bp.slicebeam.events.NeedSnackbarEvent;
 import ru.ytkab0bp.slicebeam.events.ObjectsListChangedEvent;
 import ru.ytkab0bp.slicebeam.events.SelectedObjectChangedEvent;
@@ -139,7 +140,7 @@ public class OrientationMenu extends ListBedMenu {
         private Vec3d tempVec = new Vec3d();
         private int startedScrollObject;
 
-        private void translateVisual(Double x, Double y, Double z) {
+        public void translateVisual(Double x, Double y, Double z) {
             int j = fragment.getGlView().getRenderer().getSelectedObject();
             if (j == -1) return;
             startedScrollObject = j;
@@ -393,6 +394,24 @@ public class OrientationMenu extends ListBedMenu {
                 fragment.getGlView().getRenderer().setSelectionTranslation(0, 0, 0);
             }
             startedScrollObject = -1;
+        }
+
+        @EventHandler(runOnMainThread = true)
+        public void onLongClickTranslation(LongClickTranslationEvent e) {
+            if (e.visual) {
+                int j = fragment.getGlView().getRenderer().getSelectedObject();
+                if (j == -1) return;
+
+                Model model = fragment.getGlView().getRenderer().getModel();
+                model.getTranslation(j, tempVec);
+
+                xTitle.setText(formatTrackTitle(R.string.MenuOrientationPositionXValue, tempVec.x + e.x));
+                yTitle.setText(formatTrackTitle(R.string.MenuOrientationPositionYValue, tempVec.y + e.y));
+                xTrack.setCurrentPosition((int) (tempVec.x + e.x));
+                yTrack.setCurrentPosition((int) (tempVec.y + e.y));
+            } else {
+                setSelectionValues();
+            }
         }
 
         @EventHandler(runOnMainThread = true)

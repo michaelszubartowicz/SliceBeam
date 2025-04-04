@@ -45,6 +45,7 @@ public class Bed3D {
 
     private void configure(String path) {
         Native.bed_configure(pointer, path);
+        Native.bed_init_triangles_mesh(pointer, triangles.pointer);
         boundingVolume = Native.bed_get_bounding_volume(pointer);
 
         min = max = null;
@@ -76,6 +77,10 @@ public class Bed3D {
 
     public boolean isValid() {
         return boundingVolume != null;
+    }
+
+    public GLModel.MeshRaycaster getRaycaster() {
+        return triangles.getRaycaster();
     }
 
     public void render(boolean bottom, double[] viewModelMatrix, double[] projectionMatrix, float invZoom) {

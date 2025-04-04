@@ -37,6 +37,10 @@ public class SnackbarsLayout extends FrameLayout {
     }
 
     public void show(Snackbar snackbar) {
+        if (snackbar.tag != null) {
+            dismiss(snackbar.tag);
+        }
+
         SnackbarView v = new SnackbarView(getContext()).bind(snackbar);
         addView(v);
         applyTransforms();

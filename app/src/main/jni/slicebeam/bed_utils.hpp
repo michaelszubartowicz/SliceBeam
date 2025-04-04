@@ -56,6 +56,22 @@ void bed_util_init_gridlines(ExPolygon& contour, GLModel* glGridlines) {
     glGridlines->init_from(std::move(init_data));
 }
 
+void bed_util_init_triangles_its(ExPolygon& contour, indexed_triangle_set* its) {
+    if (contour.empty())
+        return;
+
+    auto triangles = triangulate_expolygon_3d(contour, 0);
+    its->vertices.reserve(triangles.size());
+
+    for (size_t i = 0; i < triangles.size(); i += 3) {
+        its->vertices.emplace_back(triangles[i].cast<float>());
+        its->vertices.emplace_back(triangles[i + 1].cast<float>());
+        its->vertices.emplace_back(triangles[i + 2].cast<float>());
+
+        its->indices.emplace_back(i, i + 1, i + 2);
+    }
+}
+
 void bed_util_init_triangles(ExPolygon& contour, GLModel* glTriangles) {
     if (glTriangles->is_initialized())
         return;

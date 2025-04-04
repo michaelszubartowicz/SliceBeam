@@ -41,7 +41,7 @@ public class Camera {
         this.zoom = zoom;
     }
 
-    public void move(float x, float y) {
+    public Vec3d calcScreenMovement(float x, float y) {
         x /= zoom;
         y /= zoom;
 
@@ -61,8 +61,10 @@ public class Camera {
         screenX.multiply(x);
         screenY.multiply(y);
 
-        Vec3d move = new Vec3d(screenX).add(screenY);
-
+        return new Vec3d(screenX).add(screenY);
+    }
+    public void move(float x, float y) {
+        Vec3d move = calcScreenMovement(x, y);
         position.add(move);
         origin.add(move);
     }

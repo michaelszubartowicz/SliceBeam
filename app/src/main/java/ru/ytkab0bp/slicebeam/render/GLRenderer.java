@@ -374,9 +374,8 @@ public class GLRenderer implements GLSurfaceView.Renderer {
         return true;
     }
 
-    public boolean onClick(float x, float y) {
-        if (model == null || isViewerEnabled) return false;
-
+    public int raycastObjectIndex(float x, float y) {
+        if (model == null) return -1;
         double minDistance = Double.MAX_VALUE;
         int j = -1;
         for (int i = 0, c = model.getObjectsCount(); i < c; i++) {
@@ -394,6 +393,13 @@ public class GLRenderer implements GLSurfaceView.Renderer {
                 }
             }
         }
+        return j;
+    }
+
+    public boolean onClick(float x, float y) {
+        if (model == null || isViewerEnabled) return false;
+
+        int j = raycastObjectIndex(x, y);
 
         if (isInFlattenMode && (j == selectedObject || j == -1)) {
             int minPlane = -1;

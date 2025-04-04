@@ -144,7 +144,7 @@ public class SettingsFragment extends ProfileListFragment {
                 }),
                 BeamServerData.isBoostyAvailable() ? new OptionElement(R.drawable.boosty, getContext().getString(R.string.SettingsBoosty)).setColor(R.attr.boostyColorTop, true).setOnClick(() -> {
                     Activity act = (Activity) getContext();
-                    act.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://boosty.to/ytkab0bp")));
+                    act.startActivity(new Intent(act, SetupActivity.class).putExtra(SetupActivity.EXTRA_BOOSTY_ONLY, true));
                 }) : null,
                 new OptionElement(R.drawable.k3d_logo_new_14, getContext().getString(R.string.SettingsK3D)).setColor(R.attr.k3dColor, true).setOnClick(() -> {
                     Activity act = (Activity) getContext();

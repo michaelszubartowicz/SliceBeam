@@ -108,6 +108,18 @@ public class MobileNavigationDelegate extends DelegateSlotImpl {
     }
 
     @Override
+    public boolean onBackPressed() {
+        if (super.onBackPressed()) {
+            return true;
+        }
+        if (currentSlot != 0) {
+            switchSlot(0, () -> navigationView.setSelectedItemId(0));
+            return true;
+        }
+        return false;
+    }
+
+    @Override
     public FrameLayout getOverlayView() {
         return root;
     }

@@ -8,11 +8,19 @@ import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
 import android.text.TextUtils;
+import android.text.style.ImageSpan;
+import android.text.style.ReplacementSpan;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -30,6 +38,7 @@ import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.ColorUtils;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -94,9 +103,11 @@ import ru.ytkab0bp.slicebeam.view.BeamSwitch;
 import ru.ytkab0bp.slicebeam.view.BoostySubsView;
 import ru.ytkab0bp.slicebeam.view.FadeRecyclerView;
 import ru.ytkab0bp.slicebeam.view.MiniColorView;
+import ru.ytkab0bp.slicebeam.view.TextColorImageSpan;
 
 public class SetupActivity extends AppCompatActivity {
     public final static String EXTRA_ABOUT = "about";
+    public final static String EXTRA_BOOSTY_ONLY = "boosty_only";
 
     private final static String TAG = "SetupActivity";
 
@@ -137,6 +148,7 @@ public class SetupActivity extends AppCompatActivity {
     private Map<ProfilesRepo, List<Slic3rConfigWrapper>> profilesMap = new HashMap<>();
     private boolean isProfilesLoaded;
     private boolean about;
+    private boolean boostyOnly;
 
     private List<ConfigObject> enabledPrinters = new ArrayList<>();
 
@@ -153,8 +165,9 @@ public class SetupActivity extends AppCompatActivity {
         SliceBeam.EVENT_BUS.registerListener(this);
 
         about = getIntent().getBooleanExtra(EXTRA_ABOUT, false);
+        boostyOnly = getIntent().getBooleanExtra(EXTRA_BOOSTY_ONLY, false);
 
-        if (!about) {
+        if (!about && !boostyOnly) {
             new BeamAlertDialogBuilder(this)
                     .setTitle(R.string.IntroEarlyAccess)
                     .setMessage(R.string.IntroEarlyAccessMessage)
@@ -166,7 +179,7 @@ public class SetupActivity extends AppCompatActivity {
         adapter = new SimpleRecyclerAdapter() {
             @Override
             public int getItemCount() {
-                return about ? 1 : limitRepoFragmentCount ? REPOS_INDEX + 1 : limitProfileFragmentCount ? PROFILES_INDEX + 1 : super.getItemCount();
+                return about || boostyOnly ? 1 : limitRepoFragmentCount ? REPOS_INDEX + 1 : limitProfileFragmentCount ? PROFILES_INDEX + 1 : super.getItemCount();
             }
         };
         setItems();
@@ -197,13 +210,15 @@ public class SetupActivity extends AppCompatActivity {
 
             @Override
             public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
-                if (position == 0) {
+                if (position == 0 && !boostyOnly) {
                     backgroundProgress = positionOffset;
                 } else {
                     backgroundProgress = 1f;
                 }
 
-                if (position == BOOSTY_INDEX) {
+                if (boostyOnly) {
+                    boostyProgress = 1f;
+                } else if (position == BOOSTY_INDEX) {
                     boostyProgress = 1f - positionOffset;
                 } else if (position == BOOSTY_INDEX - 1) {
                     boostyProgress = positionOffset;
@@ -462,7 +477,9 @@ public class SetupActivity extends AppCompatActivity {
     }
 
     private void setItems() {
-        if (about) {
+        if (boostyOnly) {
+            adapter.setItems(Collections.singletonList(new BoostyItem()));
+        } else if (about) {
             adapter.setItems(Collections.singletonList(new AboutItem()));
         } else {
             List<SimpleRecyclerItem> items = new ArrayList<>(Arrays.asList(
@@ -1008,25 +1025,42 @@ public class SetupActivity extends AppCompatActivity {
             }});
 
             TextView subscribeButton = new TextView(ctx);
-            subscribeButton.setText(R.string.IntroBoostySupport);
+            SpannableStringBuilder sb = SpannableStringBuilder.valueOf(ctx.getString(R.string.IntroBoostySupport)).append(" ");
+            Drawable dr = ContextCompat.getDrawable(ctx, R.drawable.external_link_outline_24);
+            int size = ViewUtils.dp(16);
+            dr.setBounds(0, 0, size, size);
+            sb.append("d", new TextColorImageSpan(dr, ViewUtils.dp(2f)), SpannableStringBuilder.SPAN_EXCLUSIVE_EXCLUSIVE);
+            subscribeButton.setText(sb);
             subscribeButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-            subscribeButton.setTextColor(ThemesRepo.getColor(R.attr.boostyColorTop));
+            subscribeButton.setTextColor(Color.WHITE);
             subscribeButton.setTypeface(ViewUtils.getTypeface(ViewUtils.ROBOTO_MEDIUM));
             subscribeButton.setGravity(Gravity.CENTER);
             subscribeButton.setPadding(ViewUtils.dp(12), ViewUtils.dp(8), ViewUtils.dp(12), ViewUtils.dp(8));
+            subscribeButton.setBackground(ViewUtils.createRipple(ThemesRepo.getColor(android.R.attr.colorControlHighlight), 16));
             subscribeButton.setOnClickListener(v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://boosty.to/ytkab0bp"))));
-            ll.addView(subscribeButton, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT) {{
-                bottomMargin = ViewUtils.dp(12);
+            ll.addView(subscribeButton, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(52)) {{
+                leftMargin = rightMargin = ViewUtils.dp(16);
+                bottomMargin = ViewUtils.dp(8);
             }});
 
             TextView buttonView = new TextView(ctx);
-            buttonView.setText(R.string.IntroNext);
+            if (boostyOnly) {
+                buttonView.setText(android.R.string.ok);
+            } else {
+                buttonView.setText(R.string.IntroNext);
+            }
             buttonView.setTextColor(ThemesRepo.getColor(R.attr.textColorOnAccent));
             buttonView.setTypeface(ViewUtils.getTypeface(ViewUtils.ROBOTO_MEDIUM));
             buttonView.setGravity(Gravity.CENTER);
             buttonView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
             buttonView.setBackground(ViewUtils.createRipple(ThemesRepo.getColor(android.R.attr.colorControlHighlight), ThemesRepo.getColor(R.attr.boostyColorTop), 16));
-            buttonView.setOnClickListener(v-> scrollToNext());
+            buttonView.setOnClickListener(v-> {
+                if (boostyOnly) {
+                    finish();
+                    return;
+                }
+                scrollToNext();
+            });
             ll.addView(buttonView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(52)) {{
                 leftMargin = rightMargin = ViewUtils.dp(16);
                 bottomMargin = ViewUtils.dp(16);

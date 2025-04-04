@@ -17,17 +17,23 @@ import android.opengl.GLSurfaceView;
 import android.text.Layout;
 import android.text.StaticLayout;
 import android.text.TextPaint;
+import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.ViewConfiguration;
 
 import java.nio.IntBuffer;
+import java.util.ArrayList;
 
 import ru.ytkab0bp.slicebeam.R;
+import ru.ytkab0bp.slicebeam.SliceBeam;
+import ru.ytkab0bp.slicebeam.events.LongClickTranslationEvent;
 import ru.ytkab0bp.slicebeam.render.GLRenderer;
+import ru.ytkab0bp.slicebeam.slic3r.GLModel;
 import ru.ytkab0bp.slicebeam.theme.IThemeView;
 import ru.ytkab0bp.slicebeam.theme.ThemesRepo;
 import ru.ytkab0bp.slicebeam.utils.Prefs;
+import ru.ytkab0bp.slicebeam.utils.Vec3d;
 import ru.ytkab0bp.slicebeam.utils.ViewUtils;
 
 public class GLView extends GLSurfaceView implements IThemeView {
@@ -40,9 +46,26 @@ public class GLView extends GLSurfaceView implements IThemeView {
     private boolean fromTwoPointers;
     private boolean onePointerGesture;
     private boolean twoPointerGesture;
+    private boolean longClickGesture;
     private boolean isScaling;
 
+    private Vec3d tempVec = new Vec3d();
+    private Vec3d longClickOffset = new Vec3d();
+    private Vec3d longClickTranslation = new Vec3d();
+    private ArrayList<GLModel.HitResult> longClickHitResults = new ArrayList<>();
     private long lastActionTime = System.currentTimeMillis();
+    private Runnable longClick = () -> {
+        getRenderer().getBed().getRaycaster().raycast(getRenderer(), longClickHitResults, lastX, lastY);
+        if (!longClickHitResults.isEmpty()) {
+            performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+            longClickGesture = true;
+
+            GLModel.HitResult result = longClickHitResults.get(0);
+            getRenderer().getModel().getTranslation(getRenderer().getSelectedObject(), tempVec);
+            longClickOffset.x = result.position.x - tempVec.x;
+            longClickOffset.y = result.position.y - tempVec.y;
+        }
+    };
 
     private Path path = new Path();
     private Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -249,21 +272,43 @@ public class GLView extends GLSurfaceView implements IThemeView {
         int action = e.getActionMasked();
 
         if (e.getPointerCount() > 2) {
+            removeCallbacks(longClick);
+            longClickGesture = false;
             return true;
         }
 
         if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN) {
             if (e.getPointerCount() == 2) {
+                removeCallbacks(longClick);
+                longClickGesture = false;
                 calcStartFocus(e);
                 fromTwoPointers = true;
             } else {
                 lastX = e.getX();
                 lastY = e.getY();
+
+                int j = renderer.raycastObjectIndex(lastX, lastY);
+                if (j == renderer.getSelectedObject() && j != -1) {
+                    postDelayed(longClick, 300);
+                }
             }
 
             return true;
         }
         if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP || action == MotionEvent.ACTION_CANCEL) {
+            removeCallbacks(longClick);
+            if (longClickGesture) {
+                queueEvent(()->{
+                    int j = getRenderer().getSelectedObject();
+                    getRenderer().getModel().getTranslation(j, tempVec);
+                    getRenderer().setSelectionTranslation(0, 0, 0);
+                    getRenderer().getModel().translate(j, longClickTranslation.x, longClickTranslation.y, 0);
+                    getRenderer().invalidateGlModel(j);
+                    requestRender();
+                    SliceBeam.EVENT_BUS.fireEvent(new LongClickTranslationEvent(longClickTranslation.x, longClickTranslation.y, false));
+                });
+            }
+            longClickGesture = false;
             if (fromTwoPointers) {
                 if (e.getPointerCount() == 1) {
                     fromTwoPointers = false;
@@ -286,7 +331,7 @@ public class GLView extends GLSurfaceView implements IThemeView {
                 onePointerGesture = false;
             }
 
-            // TODO: Rotate with inertia
+            // TODO: Rotate with inertia?
             return true;
         }
         if (action == MotionEvent.ACTION_MOVE) {
@@ -347,18 +392,35 @@ public class GLView extends GLSurfaceView implements IThemeView {
                     if (Math.sqrt(distanceX * distanceX + distanceY * distanceY) >= touchSlop) {
                         onePointerGesture = true;
                         startingGesture = true;
+                        removeCallbacks(longClick);
                     }
                 }
 
                 if (onePointerGesture) {
                     if (!startingGesture) {
-                        int mode = Prefs.getCameraControlMode();
-                        if (mode == Prefs.CAMERA_CONTROL_MODE_ROTATE_MOVE) {
-                            renderer.getCamera().rotateAround(distanceX / touchSlop * Prefs.getCameraSensitivity(), distanceY / touchSlop * Prefs.getCameraSensitivity());
+                        if (longClickGesture) {
+                            Vec3d move = getRenderer().getCamera().calcScreenMovement(distanceX / touchSlop * 4.5f, distanceY / touchSlop * 4.5f);
+
+                            getRenderer().getModel().getTranslation(getRenderer().getSelectedObject(), tempVec);
+                            getRenderer().getBed().getRaycaster().raycast(getRenderer(), longClickHitResults, e.getX(), e.getY());
+                            if (!longClickHitResults.isEmpty()) {
+                                GLModel.HitResult result = longClickHitResults.get(0);
+                                longClickTranslation.x = result.position.x - tempVec.x - longClickOffset.x;
+                                longClickTranslation.y = result.position.y - tempVec.y - longClickOffset.y;
+                                getRenderer().setSelectionTranslation(longClickTranslation.x, longClickTranslation.y, 0);
+                                SliceBeam.EVENT_BUS.fireEvent(new LongClickTranslationEvent(longClickTranslation.x, longClickTranslation.y, true));
+                            }
+
+                            requestRender();
                         } else {
-                            renderer.getCamera().move(distanceX / touchSlop * Prefs.getCameraSensitivity(), distanceY / touchSlop * Prefs.getCameraSensitivity());
+                            int mode = Prefs.getCameraControlMode();
+                            if (mode == Prefs.CAMERA_CONTROL_MODE_ROTATE_MOVE) {
+                                renderer.getCamera().rotateAround(distanceX / touchSlop * Prefs.getCameraSensitivity(), distanceY / touchSlop * Prefs.getCameraSensitivity());
+                            } else {
+                                renderer.getCamera().move(distanceX / touchSlop * Prefs.getCameraSensitivity(), distanceY / touchSlop * Prefs.getCameraSensitivity());
+                            }
+                            requestRender();
                         }
-                        requestRender();
                     }
 
                     lastX = e.getX();

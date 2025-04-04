@@ -46,6 +46,7 @@ class Native {
     static native int bed_get_bounding_volume_max_size(long ptr);
     static native double[] bed_get_bounding_volume(long ptr);
     static native void bed_configure(long ptr, String configPath);
+    static native void bed_init_triangles_mesh(long ptr, long triangles);
     static native boolean bed_arrange(long ptr, long modelPtr);
     static native void bed_release(long ptr);
 
