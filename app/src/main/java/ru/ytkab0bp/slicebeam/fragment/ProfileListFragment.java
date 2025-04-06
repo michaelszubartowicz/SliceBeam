@@ -6,6 +6,8 @@ import android.content.res.ColorStateList;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.RectF;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextUtils;
@@ -34,6 +36,8 @@ import androidx.dynamicanimation.animation.SpringAnimation;
 import androidx.dynamicanimation.animation.SpringForce;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions;
 import com.mrudultora.colorpicker.ColorPickerPopUp;
 
 import java.util.ArrayList;
@@ -47,6 +51,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import ru.ytkab0bp.slicebeam.R;
 import ru.ytkab0bp.slicebeam.SliceBeam;
+import ru.ytkab0bp.slicebeam.cloud.CloudAPI;
+import ru.ytkab0bp.slicebeam.cloud.CloudController;
 import ru.ytkab0bp.slicebeam.components.BeamAlertDialogBuilder;
 import ru.ytkab0bp.slicebeam.components.BeamColorPickerPopUp;
 import ru.ytkab0bp.slicebeam.config.ConfigObject;
@@ -56,6 +62,7 @@ import ru.ytkab0bp.slicebeam.recycler.PreferenceItem;
 import ru.ytkab0bp.slicebeam.recycler.PreferenceSwitchItem;
 import ru.ytkab0bp.slicebeam.recycler.SimpleRecyclerItem;
 import ru.ytkab0bp.slicebeam.slic3r.ConfigOptionDef;
+import ru.ytkab0bp.slicebeam.slic3r.PrintConfigDef;
 import ru.ytkab0bp.slicebeam.slic3r.Slic3rConfigWrapper;
 import ru.ytkab0bp.slicebeam.slic3r.Slic3rLocalization;
 import ru.ytkab0bp.slicebeam.theme.IThemeView;
@@ -68,6 +75,8 @@ import ru.ytkab0bp.slicebeam.view.FadeRecyclerView;
 import ru.ytkab0bp.slicebeam.view.ProfileDropdownView;
 
 public abstract class ProfileListFragment extends Fragment {
+    public final static int SPECIAL_TYPE_CLOUD_HEADER = 0;
+
     private final static Object ROTATION_PAYLOAD = new Object();
 
     protected ProfileDropdownView dropdownView;
@@ -146,8 +155,8 @@ public abstract class ProfileListFragment extends Fragment {
                     int pos = getChildViewHolder(ch).getAdapterPosition();
                     if (pos == -1 || ch.getAlpha() < 1) continue;
 
-                    boolean top = currentList.get(pos).title != null;
-                    boolean bottom = pos == getAdapter().getItemCount() - 1 || currentList.get(pos + 1).title != null;
+                    boolean top = currentList.get(pos).title != null || currentList.get(pos).hasSpecialType();
+                    boolean bottom = pos == getAdapter().getItemCount() - 1 || currentList.get(pos + 1).title != null || currentList.get(pos + 1).hasSpecialType();
 
                     if (top && startI != -1) {
                         c.drawRoundRect(0, getChildAt(startI).getTop() + getChildAt(startI).getTranslationY(), getWidth(), ch.getTop() + ch.getTranslationY() - ViewUtils.dp(8), ViewUtils.dp(32), ViewUtils.dp(32), bgPaint);
@@ -204,7 +213,7 @@ public abstract class ProfileListFragment extends Fragment {
         };
         recyclerView.setItemAnimator(new CubicBezierItemAnimator());
         recyclerView.setAdapter(new RecyclerView.Adapter() {
-            private final static int TYPE_TITLE = 0, TYPE_SIMPLE = 1;
+            private final static int TYPE_TITLE = 0, TYPE_CLOUD_PROFILE = 1, TYPE_SIMPLE = 2;
 
             private Map<Class<?>, Integer> viewType = new HashMap<>();
             private Map<Integer, SimpleRecyclerItem> viewCreator = new HashMap<>();
@@ -219,6 +228,9 @@ public abstract class ProfileListFragment extends Fragment {
                         v = viewCreator.get(viewType).onCreateView(ctx);
                         break;
                     }
+                    case TYPE_CLOUD_PROFILE:
+                        v = new CloudProfileHeaderView(ctx);
+                        break;
                     case TYPE_TITLE:
                         v = new CategoryHolderView(ctx);
                         break;
@@ -256,6 +268,43 @@ public abstract class ProfileListFragment extends Fragment {
                         OptionElement el = currentList.get(position).optionEl;
                         el.boundIndex = position;
                         el.simpleItem.onBindView(holder.itemView);
+                        break;
+                    }
+                    case TYPE_CLOUD_PROFILE: {
+                        OptionWrapper w = currentList.get(position);
+                        CloudProfileHeaderView holderView = (CloudProfileHeaderView) holder.itemView;
+                        holderView.setTag(w.color);
+                        if (Prefs.getCloudAPIToken() != null) {
+                            CloudAPI.UserInfo info = CloudController.getUserInfo();
+                            if (info != null) {
+                                if (!TextUtils.isEmpty(info.avatarUrl)) {
+                                    holderView.hasAvatar = true;
+                                    Glide.with(holderView.avatar)
+                                            .load(info.avatarUrl)
+                                            .circleCrop()
+                                            .transition(DrawableTransitionOptions.withCrossFade())
+                                            .into(holderView.avatar);
+                                } else {
+                                    holderView.hasAvatar = false;
+                                    holderView.avatar.setImageResource(R.drawable.user_circle_outline_28);
+                                }
+
+                                holderView.title.setText(info.displayName);
+                            } else {
+                                holderView.hasAvatar = false;
+                                holderView.avatar.setImageResource(R.drawable.user_circle_outline_28);
+
+                                holderView.title.setText(R.string.SettingsCloudLoading);
+                            }
+                            holderView.subtitle.setText(R.string.SettingsCloudTapToManage);
+                        } else {
+                            holderView.hasAvatar = false;
+                            holderView.avatar.setImageResource(R.drawable.user_circle_outline_28);
+                            holderView.title.setText(R.string.SettingsCloudNotLoggedIn);
+                            holderView.subtitle.setText(R.string.SettingsCloudTapToShowMore);
+                        }
+                        holderView.onApplyTheme();
+                        holderView.setOnClickListener(view -> w.onClick.run());
                         break;
                     }
                     case TYPE_TITLE: {
@@ -301,6 +350,13 @@ public abstract class ProfileListFragment extends Fragment {
             @Override
             public int getItemViewType(int position) {
                 OptionWrapper w = currentList.get(position);
+                if (w.optionEl != null && w.optionEl.specialType != -1) {
+                    switch (w.optionEl.specialType) {
+                        default:
+                        case SPECIAL_TYPE_CLOUD_HEADER:
+                            return TYPE_CLOUD_PROFILE;
+                    }
+                }
                 if (w.title != null) return TYPE_TITLE;
 
                 if (w.optionEl.simpleItem != null) {
@@ -469,7 +525,12 @@ public abstract class ProfileListFragment extends Fragment {
             OptionElement el = items.get(i);
             if (el == null) continue;
             OptionWrapper w = el.title != null ? new OptionWrapper(el.icon, el.title, el.onClick, el.color, el.noTint) : new OptionWrapper(el);
-            if (el.title != null) {
+            if (el.specialType != -1) {
+                w.color = el.color;
+                w.noTint = el.noTint;
+                w.onClick = el.onClick;
+            }
+            if (el.title != null || el.specialType != -1) {
                 w.categoryIndex = j;
                 categoryElements.put(j, new ArrayList<>());
                 j++;
@@ -563,6 +624,8 @@ public abstract class ProfileListFragment extends Fragment {
     }
 
     public final class OptionElement {
+        public int specialType = -1;
+
         public int icon;
         public String title;
         public int color;
@@ -916,6 +979,10 @@ public abstract class ProfileListFragment extends Fragment {
             optionEl = el;
         }
 
+        boolean hasSpecialType() {
+            return optionEl != null && optionEl.specialType != -1;
+        }
+
         @Override
         public View onCreateView(Context ctx) {
             FrameLayout v = new FrameLayout(ctx);
@@ -926,6 +993,49 @@ public abstract class ProfileListFragment extends Fragment {
         }
     }
 
+    private final static class CloudProfileHeaderView extends LinearLayout implements IThemeView {
+        private ImageView avatar;
+        private TextView title;
+        private TextView subtitle;
+        private boolean hasAvatar;
+
+        public CloudProfileHeaderView(Context context) {
+            super(context);
+
+            setOrientation(HORIZONTAL);
+            setGravity(Gravity.CENTER_VERTICAL);
+            setPadding(ViewUtils.dp(21), ViewUtils.dp(16), ViewUtils.dp(21), ViewUtils.dp(16));
+
+            avatar = new ImageView(context);
+            addView(avatar, new LayoutParams(ViewUtils.dp(26), ViewUtils.dp(26)) {{
+                setMarginEnd(ViewUtils.dp(12));
+            }});
+
+            LinearLayout ll = new LinearLayout(context);
+            ll.setOrientation(VERTICAL);
+            ll.setGravity(Gravity.CENTER);
+            title = new TextView(context);
+            title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+            title.setTypeface(ViewUtils.getTypeface(ViewUtils.ROBOTO_MEDIUM));
+            ll.addView(title);
+            subtitle = new TextView(context);
+            subtitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            ll.addView(subtitle);
+            addView(ll, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+            onApplyTheme();
+        }
+
+        @Override
+        public void onApplyTheme() {
+            setBackground(ViewUtils.createRipple(ThemesRepo.getColor(android.R.attr.colorControlHighlight), 32));
+            title.setTextColor(ThemesRepo.getColor(android.R.attr.textColorPrimary));
+            subtitle.setTextColor(ThemesRepo.getColor(android.R.attr.textColorSecondary));
+            if (!hasAvatar) {
+                avatar.setImageTintList(ColorStateList.valueOf(ThemesRepo.getColor(android.R.attr.textColorSecondary)));
+            }
+        }
+    }
     private final static class CategoryHolderView extends LinearLayout implements IThemeView {
         private ImageView icon;
         private TextView title;

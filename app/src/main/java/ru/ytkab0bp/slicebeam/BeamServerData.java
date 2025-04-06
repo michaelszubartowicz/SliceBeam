@@ -45,6 +45,10 @@ public class BeamServerData {
         return !BuildConfig.IS_GOOGLE_PLAY || Prefs.isRussianIP();
     }
 
+    public static boolean isCloudAvailable() {
+        return isBoostyAvailable();
+    }
+
     public static void load() {
         client.get(DATA_URL, new AsyncHttpResponseHandler() {
             @Override

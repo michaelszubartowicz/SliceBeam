@@ -5,6 +5,8 @@ import android.app.Application;
 import android.content.Intent;
 import android.util.Log;
 
+import com.instacart.truetime.time.TrueTimeImpl;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -26,6 +28,7 @@ import ru.ytkab0bp.slicebeam.boot.PrefsTask;
 import ru.ytkab0bp.slicebeam.boot.PrintConfigWarmupTask;
 import ru.ytkab0bp.slicebeam.boot.TrueTimeTask;
 import ru.ytkab0bp.slicebeam.boot.VibrationUtilsTask;
+import ru.ytkab0bp.slicebeam.cloud.CloudController;
 import ru.ytkab0bp.slicebeam.config.ConfigObject;
 import ru.ytkab0bp.slicebeam.slic3r.ConfigOptionDef;
 import ru.ytkab0bp.slicebeam.slic3r.PrintConfigDef;
@@ -35,6 +38,7 @@ import ru.ytkab0bp.slicebeam.utils.Prefs;
 public class SliceBeam extends Application {
     public static SliceBeam INSTANCE;
     public static EventBus EVENT_BUS = EventBus.newBus("main");
+    public static TrueTimeImpl TRUE_TIME;
     public static Slic3rConfigWrapper CONFIG;
     public static int CONFIG_UID = 0;
     public static BeamServerData SERVER_DATA;
@@ -82,6 +86,7 @@ public class SliceBeam extends Application {
         } catch (Exception e) {
             Log.e("Config", "Failed to save config", e);
         }
+        CloudController.notifyDataChanged();
     }
 
     public static File getModelCacheDir() {

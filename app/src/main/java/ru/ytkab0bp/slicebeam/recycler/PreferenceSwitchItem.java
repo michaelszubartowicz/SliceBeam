@@ -96,9 +96,10 @@ public class PreferenceSwitchItem extends SimpleRecyclerItem<PreferenceSwitchIte
 
             icon = new ImageView(context);
             icon.setLayoutParams(new LayoutParams(ViewUtils.dp(28), ViewUtils.dp(28)) {{
-                setMarginEnd(ViewUtils.dp(16));
-                gravity = Gravity.CENTER_VERTICAL;
+                setMarginStart(ViewUtils.dp(4));
+                setMarginEnd(ViewUtils.dp(8));
             }});
+            addView(icon);
 
             LinearLayout innerLayout = new LinearLayout(context);
             innerLayout.setOrientation(VERTICAL);
@@ -168,7 +169,7 @@ public class PreferenceSwitchItem extends SimpleRecyclerItem<PreferenceSwitchIte
         public void onApplyTheme() {
             title.setTextColor(ThemesRepo.getColor(android.R.attr.textColorPrimary));
             subtitle.setTextColor(ThemesRepo.getColor(android.R.attr.textColorSecondary));
-            icon.setImageTintList(ColorStateList.valueOf(ThemesRepo.getColor(android.R.attr.colorAccent)));
+            icon.setImageTintList(ColorStateList.valueOf(ThemesRepo.getColor(android.R.attr.textColorSecondary)));
             setBackground(ViewUtils.createRipple(ThemesRepo.getColor(android.R.attr.colorControlHighlight), 16));
         }
     }

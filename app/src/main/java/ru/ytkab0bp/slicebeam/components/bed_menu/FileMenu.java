@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.provider.MediaStore;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -14,12 +15,14 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.core.content.FileProvider;
 import androidx.core.graphics.ColorUtils;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -30,14 +33,22 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import ru.ytkab0bp.eventbus.EventHandler;
+import ru.ytkab0bp.slicebeam.BeamServerData;
+import ru.ytkab0bp.slicebeam.BuildConfig;
 import ru.ytkab0bp.slicebeam.MainActivity;
 import ru.ytkab0bp.slicebeam.R;
+import ru.ytkab0bp.slicebeam.SetupActivity;
 import ru.ytkab0bp.slicebeam.SliceBeam;
+import ru.ytkab0bp.slicebeam.cloud.CloudController;
 import ru.ytkab0bp.slicebeam.components.BeamAlertDialogBuilder;
 import ru.ytkab0bp.slicebeam.components.UnfoldMenu;
 import ru.ytkab0bp.slicebeam.components.WebViewMenu;
 import ru.ytkab0bp.slicebeam.config.ConfigObject;
+import ru.ytkab0bp.slicebeam.events.CloudFeaturesUpdatedEvent;
+import ru.ytkab0bp.slicebeam.events.CloudModelsRemainingCountUpdatedEvent;
+import ru.ytkab0bp.slicebeam.events.NeedDismissAIGeneratorMenu;
 import ru.ytkab0bp.slicebeam.events.NeedDismissCalibrationsMenu;
+import ru.ytkab0bp.slicebeam.events.NeedDismissSnackbarEvent;
 import ru.ytkab0bp.slicebeam.events.NeedSnackbarEvent;
 import ru.ytkab0bp.slicebeam.events.ObjectsListChangedEvent;
 import ru.ytkab0bp.slicebeam.events.SelectedObjectChangedEvent;
@@ -50,12 +61,17 @@ import ru.ytkab0bp.slicebeam.slic3r.Bed3D;
 import ru.ytkab0bp.slicebeam.slic3r.Slic3rRuntimeError;
 import ru.ytkab0bp.slicebeam.theme.BeamTheme;
 import ru.ytkab0bp.slicebeam.theme.ThemesRepo;
+import ru.ytkab0bp.slicebeam.utils.Prefs;
 import ru.ytkab0bp.slicebeam.utils.ViewUtils;
 import ru.ytkab0bp.slicebeam.view.DividerView;
 import ru.ytkab0bp.slicebeam.view.FadeRecyclerView;
+import ru.ytkab0bp.slicebeam.view.SegmentsView;
+import ru.ytkab0bp.slicebeam.view.SnackbarsLayout;
 
 public class FileMenu extends ListBedMenu {
     private final static List<String> K3D_SUPPORTED_LANGUAGES = Arrays.asList("en", "ru");
+
+    private boolean wasPortrait;
 
     private String getK3DLanguage() {
         String lang = Locale.getDefault().getLanguage();
@@ -74,13 +90,18 @@ public class FileMenu extends ListBedMenu {
                 .replace("\"", "\\\"");
     }
 
+    private boolean hasModel() {
+        return fragment.getGlView().getRenderer().getModel() != null;
+    }
+
     private boolean hasSelection() {
-        return fragment.getGlView().getRenderer().getModel() != null && fragment.getGlView().getRenderer().getSelectedObject() != -1;
+        return hasModel() && fragment.getGlView().getRenderer().getSelectedObject() != -1;
     }
 
     @Override
     protected List<SimpleRecyclerItem> onCreateItems(boolean portrait) {
-        return Arrays.asList(
+        wasPortrait = portrait;
+        List<SimpleRecyclerItem> list = new ArrayList<>(Arrays.asList(
                 new BedMenuItem(R.string.MenuFileOpen, R.drawable.folder_simple_plus_outline_28).onClick(v -> {
                     if (!fragment.getGlView().getRenderer().getBed().isValid()) {
                         Toast.makeText(fragment.getContext(), R.string.BedConfigurationError, Toast.LENGTH_SHORT).show();
@@ -104,7 +125,31 @@ public class FileMenu extends ListBedMenu {
                         fragment.updateModel();
                     }
                 }),
-                new SpaceItem(portrait ? ViewUtils.dp(3) : 0, portrait ? 0 : ViewUtils.dp(3)),
+                new SpaceItem(portrait ? ViewUtils.dp(3) : 0, portrait ? 0 : ViewUtils.dp(3))));
+        if (BeamServerData.isBoostyAvailable() && CloudController.needShowAIGenerator()) {
+            list.add(new BedMenuItem(R.string.MenuFileAIGenerator, R.drawable.picture_stack_outline_28).setShiny(true).onClick(view -> {
+                if (Prefs.getCloudAPIToken() == null || CloudController.getUserInfo() != null && CloudController.getMaxGeneratedModels() == 0) {
+                    Context ctx = view.getContext();
+                    ctx.startActivity(new Intent(ctx, SetupActivity.class).putExtra(SetupActivity.EXTRA_CLOUD_PROFILE, true));
+                    return;
+                }
+                if (CloudController.getUserInfo() == null) {
+                    SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.LOADING, R.string.MenuFileAIGeneratorPleaseWaitSetup).tag(CloudController.USER_INFO_AI_GEN_TAG));
+                    ViewUtils.postOnMainThread(() -> {
+                        if (CloudController.getUserInfo() == null) {
+                            SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(CloudController.USER_INFO_AI_GEN_TAG));
+                            SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.ERROR, R.string.MenuFileAIGeneratorErrorNotLoadedUserAccount));
+                        } else {
+                            fragment.showUnfoldMenu(new AIGeneratorMenu(), view);
+                        }
+                    }, 2500);
+                    return;
+                }
+
+                fragment.showUnfoldMenu(new AIGeneratorMenu(), view);
+            }));
+        }
+        list.addAll(Arrays.asList(
                 new BedMenuItem(R.string.MenuFileCalibrations, R.drawable.wrench_outline_28).setSingleLine(true).onClick(v -> {
                     if (!fragment.getGlView().getRenderer().getBed().isValid()) {
                         Toast.makeText(fragment.getContext(), R.string.BedConfigurationError, Toast.LENGTH_SHORT).show();
@@ -200,14 +245,28 @@ public class FileMenu extends ListBedMenu {
                                     .show())
                             .setNegativeButton(android.R.string.cancel, null)
                             .show();
+                }),
+                new BedMenuItem(R.string.MenuFileExport3mf, R.drawable.arrow_down_to_square_outline_28).setEnabled(hasModel()).onClick(v -> {
+                    if (fragment.getContext() instanceof Activity) {
+                        Activity act = (Activity) fragment.getContext();
+                        Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                        i.setType("application/3mf");
+                        i.putExtra(Intent.EXTRA_TITLE, "SliceBeam_project.3mf");
+                        act.startActivityForResult(i, MainActivity.REQUEST_CODE_EXPORT_3MF);
+                    }
                 })
-        );
+        ));
+        return list;
     }
 
     @EventHandler(runOnMainThread = true)
     public void onObjectsChanged(ObjectsListChangedEvent e) {
         ((BedMenuItem) adapter.getItems().get(1)).setEnabled(hasSelection());
         adapter.notifyItemChanged(1);
+
+        int i = 8 - (BeamServerData.isBoostyAvailable() && CloudController.needShowAIGenerator() ? 0 : 1);
+        ((BedMenuItem) adapter.getItems().get(i)).setEnabled(hasModel());
+        adapter.notifyItemChanged(i);
     }
 
     @EventHandler(runOnMainThread = true)
@@ -216,8 +275,144 @@ public class FileMenu extends ListBedMenu {
         adapter.notifyItemChanged(1);
     }
 
-    public final class CalibrationsMenu extends UnfoldMenu {
+    @EventHandler(runOnMainThread = true)
+    public void onFeaturedUpdated(CloudFeaturesUpdatedEvent e) {
+        adapter.setItems(onCreateItems(wasPortrait));
+    }
 
+    public final static class AIGeneratorMenu extends UnfoldMenu {
+        private TextView remainingView;
+        private SegmentsView segmentsView;
+
+        @Override
+        public int getRequestedSize(FrameLayout into, boolean portrait) {
+            return (int) (portrait ? ViewUtils.dp(52) + ViewUtils.dp(60) * 2 + ViewUtils.dp(28) + ViewUtils.dp(18) + ViewUtils.dp(2) : into.getWidth() * 0.6f);
+        }
+
+        @Override
+        protected View onCreateView(Context ctx, boolean portrait) {
+            LinearLayout ll = new LinearLayout(ctx);
+            ll.setOrientation(LinearLayout.VERTICAL);
+
+            RecyclerView rv = new FadeRecyclerView(ctx);
+            rv.setOverScrollMode(View.OVER_SCROLL_NEVER);
+            SimpleRecyclerAdapter adapter = new SimpleRecyclerAdapter();
+            adapter.setItems(Arrays.asList(
+                    new PreferenceItem().setIcon(R.drawable.camera_outline_28).setTitle(ctx.getString(R.string.MenuFileAIGeneratorFromCamera)).setOnClickListener(v -> {
+                        if (CloudController.getGeneratedModels() >= CloudController.getMaxGeneratedModels()) {
+                            SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.ERROR, R.string.MenuFileAIGeneratorNoGenerationsLeft));
+                            return;
+                        }
+                        if (ctx instanceof MainActivity) {
+                            try {
+                                MainActivity.aiTempFile = File.createTempFile("ai_capture", ".jpg");
+                                Intent i = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                                i.putExtra(MediaStore.EXTRA_OUTPUT, FileProvider.getUriForFile(ctx, BuildConfig.APPLICATION_ID + ".provider", MainActivity.aiTempFile));
+                                i.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                                ((MainActivity) ctx).startActivityForResult(i, MainActivity.REQUEST_CODE_AI_GENERATOR_TAKE_PHOTO);
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                    }),
+                    new PreferenceItem().setIcon(R.drawable.picture_outline_28).setTitle(ctx.getString(R.string.MenuFileAIGeneratorFromGallery)).setOnClickListener(v -> {
+                        if (CloudController.getGeneratedModels() >= CloudController.getMaxGeneratedModels()) {
+                            SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.ERROR, R.string.MenuFileAIGeneratorNoGenerationsLeft));
+                            return;
+                        }
+                        if (ctx instanceof MainActivity) {
+                            Intent intent = new Intent();
+                            intent.setType("image/*");
+                            intent.setAction(Intent.ACTION_GET_CONTENT);
+                            ((MainActivity) ctx).startActivityForResult(Intent.createChooser(intent, ""), MainActivity.REQUEST_CODE_AI_GENERATOR_CHOOSE_PHOTO);
+                        }
+                    })
+            ));
+            rv.setAdapter(adapter);
+            ll.addView(rv, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+
+            ll.addView(new DividerView(ctx), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(1f)));
+
+            remainingView = new TextView(ctx);
+            remainingView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            remainingView.setGravity(Gravity.CENTER);
+            remainingView.setTextColor(ThemesRepo.getColor(android.R.attr.textColorSecondary));
+            ll.addView(remainingView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(18)) {{
+                topMargin = ViewUtils.dp(8);
+            }});
+
+            segmentsView = new SegmentsView(ctx) {
+                @Override
+                protected int onGetColor(int i) {
+                    return i == 1 ? ThemesRepo.getColor(android.R.attr.textColorSecondary) : ThemesRepo.getColor(android.R.attr.colorAccent);
+                }
+            };
+            ll.addView(segmentsView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(12)) {{
+                leftMargin = rightMargin = ViewUtils.dp(12);
+                topMargin = bottomMargin = ViewUtils.dp(8);
+            }});
+            updateRemaining();
+
+            ll.addView(new DividerView(ctx), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(1f)));
+
+            LinearLayout toolbar = new LinearLayout(ctx);
+            toolbar.setPadding(ViewUtils.dp(12), 0, ViewUtils.dp(12), 0);
+            toolbar.setOrientation(LinearLayout.HORIZONTAL);
+            toolbar.setGravity(Gravity.CENTER_VERTICAL);
+            toolbar.setBackground(ViewUtils.createRipple(ThemesRepo.getColor(android.R.attr.colorControlHighlight), 0));
+            toolbar.setOnClickListener(v -> dismiss());
+
+            ImageView icon = new ImageView(ctx);
+            icon.setImageResource(R.drawable.arrow_left_outline_28);
+            icon.setColorFilter(ThemesRepo.getColor(android.R.attr.textColorSecondary));
+            toolbar.addView(icon, new LinearLayout.LayoutParams(ViewUtils.dp(28), ViewUtils.dp(28)));
+
+            TextView title = new TextView(ctx);
+            title.setText(R.string.MenuOrientationPositionBack);
+            title.setTypeface(ViewUtils.getTypeface(ViewUtils.ROBOTO_MEDIUM));
+            title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
+            title.setTextColor(ThemesRepo.getColor(android.R.attr.textColorPrimary));
+            toolbar.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f) {{
+                leftMargin = ViewUtils.dp(12);
+            }});
+            ll.addView(toolbar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(52)));
+            return ll;
+        }
+
+        @Override
+        protected void onCreate() {
+            super.onCreate();
+
+            SliceBeam.EVENT_BUS.registerListener(this);
+            ViewUtils.postOnMainThread(() -> segmentsView.startAnimation(), 50);
+        }
+
+        @EventHandler(runOnMainThread = true)
+        public void onDismiss(NeedDismissAIGeneratorMenu e) {
+            dismiss();
+        }
+
+        @EventHandler(runOnMainThread = true)
+        public void onRemainingUpdated(CloudModelsRemainingCountUpdatedEvent e) {
+            updateRemaining();
+        }
+
+        @Override
+        protected void onDestroy() {
+            super.onDestroy();
+
+            SliceBeam.EVENT_BUS.unregisterListener(this);
+        }
+
+        private void updateRemaining() {
+            int rev = CloudController.getMaxGeneratedModels() - CloudController.getGeneratedModels();
+            remainingView.setText(SliceBeam.INSTANCE.getString(R.string.MenuFileAIGeneratorRemaining, rev, CloudController.getMaxGeneratedModels()));
+            segmentsView.setValues(new float[]{0, rev / (float) CloudController.getMaxGeneratedModels(), 1});
+        }
+    }
+
+    public final class CalibrationsMenu extends UnfoldMenu {
+        @Override
         public int getRequestedSize(FrameLayout into, boolean portrait) {
             return (int) (portrait ? into.getHeight() * 0.35f : into.getWidth() * 0.6f);
         }

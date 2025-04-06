@@ -21,7 +21,7 @@ public class BeamTheme {
         colors.put(R.attr.dialogBackground, 0xffffffff);
         colors.put(R.attr.switchThumbUncheckedColor, 0xffeef2f3);
         colors.put(R.attr.boostyColorTop, 0xfff06e2a);
-        colors.put(R.attr.boostyColorBottom, 0xfffce2d4);
+        colors.put(R.attr.boostyColorBottom, 0xff884725);
         colors.put(R.attr.telegramColor, 0xff27a7e7);
         colors.put(R.attr.k3dColor, 0xff039045);
         colors.put(R.attr.modelHoverColor, 0xffffffff);

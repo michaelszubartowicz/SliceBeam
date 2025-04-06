@@ -110,6 +110,10 @@ public class SegmentsView extends View {
         }
     }
 
+    protected int onGetColor(int i) {
+        return mapColor(i);
+    }
+
     @Override
     protected void onDraw(@NonNull Canvas canvas) {
         super.onDraw(canvas);
@@ -125,7 +129,7 @@ public class SegmentsView extends View {
             for (int i = 1; i < currentValues.length; i++) {
                 float prev = currentValues[i - 1];
                 float to = currentValues[i];
-                paint.setColor(mapColor(i - 1));
+                paint.setColor(onGetColor(i - 1));
                 canvas.drawRect(l + prev * dw, 0, l + to * dw, getHeight(), paint);
             }
         }

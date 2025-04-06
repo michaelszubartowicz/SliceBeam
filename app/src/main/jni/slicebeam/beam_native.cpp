@@ -1243,17 +1243,23 @@ extern "C" {
     JNIEXPORT jint JNICALL Java_ru_ytkab0bp_slicebeam_slic3r_Native_shader_1get_1uniform_1location(JNIEnv* env, jclass, jlong ptr, jstring name) {
         const char* chars = env->GetStringUTFChars(name, JNI_FALSE);
         ShaderRef* shader = (ShaderRef*) (intptr_t) ptr;
-        int location = shader->program.get_uniform_location(chars);
-        env->ReleaseStringUTFChars(name, chars);
-        return location;
+        if (shader) {
+            int location = shader->program.get_uniform_location(chars);
+            env->ReleaseStringUTFChars(name, chars);
+            return location;
+        }
+        return 0;
     }
 
     JNIEXPORT jint JNICALL Java_ru_ytkab0bp_slicebeam_slic3r_Native_shader_1get_1attrib_1location(JNIEnv* env, jclass, jlong ptr, jstring name) {
-        const char* chars = env->GetStringUTFChars(name, JNI_FALSE);
-        ShaderRef* shader = (ShaderRef*) (intptr_t) ptr;
-        int location = shader->program.get_attrib_location(chars);
-        env->ReleaseStringUTFChars(name, chars);
-        return location;
+        const char *chars = env->GetStringUTFChars(name, JNI_FALSE);
+        ShaderRef *shader = (ShaderRef *) (intptr_t) ptr;
+        if (shader) {
+            int location = shader->program.get_attrib_location(chars);
+            env->ReleaseStringUTFChars(name, chars);
+            return location;
+        }
+        return 0;
     }
 
     JNIEXPORT void JNICALL Java_ru_ytkab0bp_slicebeam_slic3r_Native_shader_1start_1using(JNIEnv* env, jclass, jlong ptr) {

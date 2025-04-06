@@ -125,6 +125,100 @@ public class Prefs {
         cachedThemeMode = null;
     }
 
+    public static String getCloudAPIToken() {
+        return mPrefs.getString("cloud_api_token", null);
+    }
+
+    public static void setCloudAPIToken(String token) {
+        SharedPreferences.Editor e = mPrefs.edit();
+        if (token == null) {
+            e.remove("cloud_api_token");
+        } else {
+            e.putString("cloud_api_token", token);
+        }
+        e.apply();
+    }
+
+    public static boolean isCloudProfileSyncEnabled() {
+        return mPrefs.getBoolean("cloud_profile_sync", true);
+    }
+
+    public static void setCloudProfileSyncEnabled(boolean en) {
+        mPrefs.edit().putBoolean("cloud_profile_sync", en).apply();
+    }
+
+    public static String getCloudCachedUserInfo() {
+        return mPrefs.getString("cloud_cached_user_info", null);
+    }
+
+    public static void setCloudCachedUserInfo(String info) {
+        SharedPreferences.Editor e = mPrefs.edit();
+        if (info == null) {
+            e.remove("cloud_cached_user_info");
+        } else {
+            e.putString("cloud_cached_user_info", info);
+        }
+        e.apply();
+    }
+
+    public static int getCloudCachedUsedModels() {
+        return mPrefs.getInt("cloud_cached_models_used", 0);
+    }
+
+    public static int getCloudCachedMaxModels() {
+        return mPrefs.getInt("cloud_cached_models_max", 50);
+    }
+
+    public static void setCloudCachedUsedMaxModels(int used, int max) {
+        mPrefs.edit().putInt("cloud_cached_models_used", used).putInt("cloud_cached_models_max", max).apply();
+    }
+
+    public static String getCloudCachedUserFeatures() {
+        return mPrefs.getString("cloud_cached_user_features", null);
+    }
+
+    public static void setCloudCachedUserFeatures(String features) {
+        SharedPreferences.Editor e = mPrefs.edit();
+        if (features == null) {
+            e.remove("cloud_cached_user_features");
+        } else {
+            e.putString("cloud_cached_user_features", features);
+        }
+        e.apply();
+    }
+
+    public static long getCloudLastFeaturesSync() {
+        return mPrefs.getLong("cloud_last_features_sync", 0);
+    }
+
+    public static void setCloudLastFeaturesSync(long ls) {
+        mPrefs.edit().putLong("cloud_last_features_sync", ls).apply();
+    }
+
+    public static long getCloudLastSync() {
+        return mPrefs.getLong("cloud_last_sync", 0);
+    }
+
+    public static void setCloudLastSync(long ls) {
+        mPrefs.edit().putLong("cloud_last_sync", ls).apply();
+    }
+
+    public static long getLocalLastModified() {
+        return mPrefs.getLong("cloud_local_last_modified", 0);
+    }
+
+    public static void setLocalLastModified(long lm) {
+        mPrefs.edit().putLong("cloud_local_last_modified", lm).apply();
+    }
+
+    public static long getRemoteLastModified() {
+        return mPrefs.getLong("cloud_remote_last_modified", 0);
+    }
+
+    public static void setRemoteLastModified(long lm) {
+        mPrefs.edit().putLong("cloud_remote_last_modified", lm).apply();
+    }
+
     public enum ThemeMode {
         SYSTEM(R.string.SettingsInterfaceThemeSystem),
         LIGHT(R.string.SettingsInterfaceThemeLight),

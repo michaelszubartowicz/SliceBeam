@@ -32,6 +32,8 @@ public abstract class ListBedMenu extends BedMenu {
         recyclerView = new RecyclerView(ctx);
         recyclerView.setLayoutManager(new LinearLayoutManager(ctx, portrait ? RecyclerView.HORIZONTAL : RecyclerView.VERTICAL, false));
         recyclerView.setItemAnimator(null);
+        recyclerView.setClipToPadding(false);
+        recyclerView.setClipChildren(false);
         adapter = new SimpleRecyclerAdapter() {
             @NonNull
             @Override

@@ -15,9 +15,6 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.webkit.WebChromeClient;
-import android.webkit.WebResourceRequest;
-import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
@@ -116,6 +113,7 @@ public class BedFragment extends Fragment {
     private UnfoldMenu currentUnfoldMenu;
 
     private BedSwipeDownLayout swipeDownLayout;
+    private boolean hasWebError;
     private WebView panelWebView;
     private LinearLayout panelWebViewError;
     private ImageView webViewErrIcon;
@@ -229,7 +227,7 @@ public class BedFragment extends Fragment {
         super.onResume();
         glView.onResume();
         ConfigObject cfg = SliceBeam.CONFIG.findPrinter(SliceBeam.CONFIG.presets.get("printer"));
-        boolean enable = cfg != null && cfg.get("host_type") != null && !TextUtils.isEmpty(cfg.get("print_host"));
+        boolean enable = cfg != null && cfg.get("host_type") != null && !TextUtils.isEmpty(cfg.get("print_host")) && panelWebView != null;
         swipeDownLayout.setEnableTop(enable);
         if (enable) {
             String host = cfg.get("print_host");
@@ -246,6 +244,7 @@ public class BedFragment extends Fragment {
             }
             webViewProgressBar.animate().alpha(1).setDuration(150).start();
             panelWebView.setAlpha(0f);
+            hasWebError = false;
             panelWebView.loadUrl(host);
             panelWebViewError.animate().alpha(0).setDuration(150).setListener(new AnimatorListenerAdapter() {
                 @Override
@@ -294,46 +293,58 @@ public class BedFragment extends Fragment {
         }
 
         swipeDownLayout = new BedSwipeDownLayout(ctx);
-        panelWebView = new WebView(ctx);
-        panelWebView.getSettings().setJavaScriptEnabled(true);
-        panelWebView.setWebViewClient(new WebViewClient() {
-            @Override
-            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
-                webViewErrDescription.setText(description);
-                panelWebViewError.setVisibility(View.VISIBLE);
-                panelWebViewError.setAlpha(0f);
-                panelWebViewError.animate().alpha(1).setDuration(150).setListener(null).start();
-                webViewProgressBar.animate().alpha(0).setDuration(150).start();
-            }
-
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                panelWebView.animate().alpha(1).setDuration(150).start();
-                webViewProgressBar.animate().alpha(0).setDuration(150).start();
-            }
-        });
-
         FrameLayout wfl = new FrameLayout(ctx);
-        wfl.addView(panelWebView, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        panelWebViewError = new LinearLayout(ctx);
-        panelWebViewError.setVisibility(View.GONE);
-        panelWebViewError.setOrientation(LinearLayout.VERTICAL);
-        panelWebViewError.setGravity(Gravity.CENTER);
-        panelWebViewError.setPadding(ViewUtils.dp(12), ViewUtils.dp(12), ViewUtils.dp(12), ViewUtils.dp(12));
-        webViewErrIcon = new ImageView(ctx);
-        webViewErrIcon.setImageResource(R.drawable.globe_cross_outline_28);
-        panelWebViewError.addView(webViewErrIcon, new LinearLayout.LayoutParams(ViewUtils.dp(28), ViewUtils.dp(28)) {{
-            bottomMargin = ViewUtils.dp(8);
-        }});
-        webViewErrDescription = new TextView(ctx);
-        webViewErrDescription.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
-        webViewErrDescription.setGravity(Gravity.CENTER);
-        panelWebViewError.addView(webViewErrDescription);
-        wfl.addView(panelWebViewError, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        try {
+            panelWebView = new WebView(ctx);
+            panelWebView.getSettings().setJavaScriptEnabled(true);
+            panelWebView.setWebViewClient(new WebViewClient() {
+                @Override
+                public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                    hasWebError = true;
+                    webViewErrDescription.setText(description);
+                    panelWebViewError.setVisibility(View.VISIBLE);
+                    panelWebViewError.setAlpha(0f);
+                    panelWebViewError.animate().alpha(1).setDuration(150).setListener(new AnimatorListenerAdapter() {
+                        @Override
+                        public void onAnimationEnd(Animator animation) {
+                            panelWebView.setVisibility(View.GONE);
+                        }
+                    }).start();
+                    webViewProgressBar.animate().alpha(0).setDuration(150).start();
+                }
 
-        webViewProgressBar = new ProgressBar(ctx);
-        webViewProgressBar.setAlpha(0f);
-        wfl.addView(webViewProgressBar, new FrameLayout.LayoutParams(ViewUtils.dp(36), ViewUtils.dp(36), Gravity.CENTER));
+                @Override
+                public void onPageFinished(WebView view, String url) {
+                    if (!hasWebError) {
+                        panelWebView.animate().alpha(1).setDuration(150).start();
+                        webViewProgressBar.animate().alpha(0).setDuration(150).start();
+                    }
+                }
+            });
+
+            wfl.addView(panelWebView, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            panelWebViewError = new LinearLayout(ctx);
+            panelWebViewError.setVisibility(View.GONE);
+            panelWebViewError.setOrientation(LinearLayout.VERTICAL);
+            panelWebViewError.setGravity(Gravity.CENTER);
+            panelWebViewError.setPadding(ViewUtils.dp(12), ViewUtils.dp(12), ViewUtils.dp(12), ViewUtils.dp(12));
+            webViewErrIcon = new ImageView(ctx);
+            webViewErrIcon.setImageResource(R.drawable.globe_cross_outline_28);
+            panelWebViewError.addView(webViewErrIcon, new LinearLayout.LayoutParams(ViewUtils.dp(28), ViewUtils.dp(28)) {{
+                bottomMargin = ViewUtils.dp(8);
+            }});
+            webViewErrDescription = new TextView(ctx);
+            webViewErrDescription.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+            webViewErrDescription.setGravity(Gravity.CENTER);
+            panelWebViewError.addView(webViewErrDescription);
+            wfl.addView(panelWebViewError, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+            webViewProgressBar = new ProgressBar(ctx);
+            webViewProgressBar.setAlpha(0f);
+            wfl.addView(webViewProgressBar, new FrameLayout.LayoutParams(ViewUtils.dp(36), ViewUtils.dp(36), Gravity.CENTER));
+        } catch (Exception e) {
+            Log.wtf("BedFragment", "Failed to initialize webview", e);
+        }
 
         if (portrait) {
             LinearLayout inner = new LinearLayout(ctx);
@@ -598,9 +609,11 @@ public class BedFragment extends Fragment {
     public void onApplyTheme() {
         super.onApplyTheme();
 
-        webViewErrIcon.setImageTintList(ColorStateList.valueOf(ThemesRepo.getColor(android.R.attr.textColorSecondary)));
-        webViewErrDescription.setTextColor(ThemesRepo.getColor(android.R.attr.textColorSecondary));
-        webViewProgressBar.setIndeterminateTintList(ColorStateList.valueOf(ThemesRepo.getColor(android.R.attr.textColorSecondary)));
+        if (panelWebView != null) {
+            webViewErrIcon.setImageTintList(ColorStateList.valueOf(ThemesRepo.getColor(android.R.attr.textColorSecondary)));
+            webViewErrDescription.setTextColor(ThemesRepo.getColor(android.R.attr.textColorSecondary));
+            webViewProgressBar.setIndeterminateTintList(ColorStateList.valueOf(ThemesRepo.getColor(android.R.attr.textColorSecondary)));
+        }
         menuView.setBackgroundColor(ThemesRepo.getColor(android.R.attr.windowBackground));
         for (int i = 0; i < MenuCategory.values().length; i++) {
             if (i != currentMenuSlot) {

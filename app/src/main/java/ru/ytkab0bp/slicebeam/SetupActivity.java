@@ -1,29 +1,34 @@
 package ru.ytkab0bp.slicebeam;
 
-import static android.opengl.GLES30.*;
+import static android.opengl.GLES30.GL_COLOR_BUFFER_BIT;
+import static android.opengl.GLES30.GL_DEPTH_BUFFER_BIT;
+import static android.opengl.GLES30.GL_DEPTH_TEST;
+import static android.opengl.GLES30.glClear;
+import static android.opengl.GLES30.glClearColor;
+import static android.opengl.GLES30.glDisable;
+import static android.opengl.GLES30.glEnable;
+import static android.opengl.GLES30.glViewport;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.text.SpannableStringBuilder;
-import android.text.Spanned;
 import android.text.TextUtils;
-import android.text.style.ImageSpan;
-import android.text.style.ReplacementSpan;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.View;
 import android.view.ViewGroup;
@@ -45,6 +50,7 @@ import androidx.core.view.ViewCompat;
 import androidx.dynamicanimation.animation.FloatValueHolder;
 import androidx.dynamicanimation.animation.SpringAnimation;
 import androidx.dynamicanimation.animation.SpringForce;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
@@ -82,10 +88,15 @@ import javax.microedition.khronos.opengles.GL10;
 
 import cz.msebera.android.httpclient.Header;
 import ru.ytkab0bp.eventbus.EventHandler;
+import ru.ytkab0bp.slicebeam.cloud.CloudAPI;
+import ru.ytkab0bp.slicebeam.cloud.CloudController;
 import ru.ytkab0bp.slicebeam.components.BeamAlertDialogBuilder;
+import ru.ytkab0bp.slicebeam.components.CloudManageBottomSheet;
 import ru.ytkab0bp.slicebeam.config.ConfigObject;
 import ru.ytkab0bp.slicebeam.events.BeamServerDataUpdatedEvent;
+import ru.ytkab0bp.slicebeam.events.CloudLoginStateUpdatedEvent;
 import ru.ytkab0bp.slicebeam.recycler.BigHeaderItem;
+import ru.ytkab0bp.slicebeam.recycler.PreferenceItem;
 import ru.ytkab0bp.slicebeam.recycler.SimpleRecyclerAdapter;
 import ru.ytkab0bp.slicebeam.recycler.SimpleRecyclerItem;
 import ru.ytkab0bp.slicebeam.recycler.TextHintRecyclerItem;
@@ -108,6 +119,7 @@ import ru.ytkab0bp.slicebeam.view.TextColorImageSpan;
 public class SetupActivity extends AppCompatActivity {
     public final static String EXTRA_ABOUT = "about";
     public final static String EXTRA_BOOSTY_ONLY = "boosty_only";
+    public final static String EXTRA_CLOUD_PROFILE = "cloud_profile";
 
     private final static String TAG = "SetupActivity";
 
@@ -140,6 +152,7 @@ public class SetupActivity extends AppCompatActivity {
     private List<ProfilesRepo> repos = new ArrayList<>();
     private ReposItem reposItem;
     private ProfilesItem profilesItem;
+    private CloudProfileItem cloudItem;
     private boolean isReposLoaded;
     private boolean limitRepoFragmentCount = true;
     private boolean limitProfileFragmentCount = true;
@@ -149,6 +162,7 @@ public class SetupActivity extends AppCompatActivity {
     private boolean isProfilesLoaded;
     private boolean about;
     private boolean boostyOnly;
+    private boolean cloudProfile;
 
     private List<ConfigObject> enabledPrinters = new ArrayList<>();
 
@@ -166,8 +180,9 @@ public class SetupActivity extends AppCompatActivity {
 
         about = getIntent().getBooleanExtra(EXTRA_ABOUT, false);
         boostyOnly = getIntent().getBooleanExtra(EXTRA_BOOSTY_ONLY, false);
+        cloudProfile = getIntent().getBooleanExtra(EXTRA_CLOUD_PROFILE, false);
 
-        if (!about && !boostyOnly) {
+        if (!about && !boostyOnly && !cloudProfile) {
             new BeamAlertDialogBuilder(this)
                     .setTitle(R.string.IntroEarlyAccess)
                     .setMessage(R.string.IntroEarlyAccessMessage)
@@ -175,11 +190,15 @@ public class SetupActivity extends AppCompatActivity {
                     .show();
         }
 
+        if (boostyOnly || cloudProfile) {
+            backgroundProgress = 1f;
+        }
+
         pager = new ViewPager2(this);
         adapter = new SimpleRecyclerAdapter() {
             @Override
             public int getItemCount() {
-                return about || boostyOnly ? 1 : limitRepoFragmentCount ? REPOS_INDEX + 1 : limitProfileFragmentCount ? PROFILES_INDEX + 1 : super.getItemCount();
+                return about || boostyOnly || cloudProfile ? 1 : limitRepoFragmentCount ? REPOS_INDEX + 1 : limitProfileFragmentCount ? PROFILES_INDEX + 1 : super.getItemCount();
             }
         };
         setItems();
@@ -210,7 +229,7 @@ public class SetupActivity extends AppCompatActivity {
 
             @Override
             public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
-                if (position == 0 && !boostyOnly) {
+                if (position == 0 && !boostyOnly && !cloudProfile) {
                     backgroundProgress = positionOffset;
                 } else {
                     backgroundProgress = 1f;
@@ -348,14 +367,7 @@ public class SetupActivity extends AppCompatActivity {
                     }
                 }
 
-                title.setTranslationY(ViewUtils.lerp(titleY, (ViewUtils.dp(52) - title.getHeight() * title.getScaleY()) / 2f, backgroundProgress));
-                float sc = ViewUtils.lerp(1, 22 / 32f, backgroundProgress);
-                title.setPivotX(title.getWidth() / 2f);
-                title.setPivotY(0);
-                title.setScaleX(sc);
-                title.setScaleY(sc);
-                int color = ColorUtils.blendARGB(ThemesRepo.getColor(R.attr.textColorOnAccent), ThemesRepo.getColor(android.R.attr.colorAccent), backgroundProgress - boostyProgress);
-                title.setTextColor(color);
+                invalidateTitleY();
                 backgroundView.requestRender();
             }
         });
@@ -368,7 +380,7 @@ public class SetupActivity extends AppCompatActivity {
                 super.onSizeChanged(w, h, oldw, oldh);
 
                 titleY = h / 4;
-                title.setTranslationY(ViewUtils.lerp(titleY, title.getPaddingTop(), backgroundProgress));
+                invalidateTitleY();
             }
         };
         fl.setClipChildren(false);
@@ -417,10 +429,13 @@ public class SetupActivity extends AppCompatActivity {
                         topColor = ColorUtils.blendARGB(bottomColor, ThemesRepo.getColor(R.attr.boostyColorTop), boostyProgress);
                         bottomColor = ColorUtils.blendARGB(bottomColor, ThemesRepo.getColor(R.attr.boostyColorBottom), boostyProgress);
                     }
+                    if (cloudProfile) {
+                        bottomColor = ColorUtils.blendARGB(bottomColor, topColor, 0.5f);
+                    }
 
                     shader.setUniformColor("top_color", topColor);
                     shader.setUniformColor("bottom_color", bottomColor);
-                    shader.setUniform("progress", backgroundProgress - (boostyProgress != 0 ? 1.2f : 0));
+                    shader.setUniform("progress", backgroundProgress - (cloudProfile ? 1.4f : 0) - (boostyProgress != 0 ? 1.2f : 0));
                     shader.setUniform("time", time);
                     backgroundModel.render();
                     shader.stopUsing();
@@ -434,7 +449,7 @@ public class SetupActivity extends AppCompatActivity {
         title = new TextView(this);
         title.setGravity(Gravity.CENTER);
         title.setTypeface(Typeface.DEFAULT_BOLD);
-        title.setText(R.string.AppName);
+        title.setText(cloudProfile ? R.string.SettingsCloudManageTitle : R.string.AppName);
         title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 32);
         title.setTextColor(ThemesRepo.getColor(R.attr.textColorOnAccent));
         title.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL));
@@ -459,6 +474,17 @@ public class SetupActivity extends AppCompatActivity {
         }
     }
 
+    private void invalidateTitleY() {
+        float sc = ViewUtils.lerp(1, 22 / 32f, backgroundProgress);
+        title.setPivotX(title.getWidth() / 2f);
+        title.setPivotY(0);
+        title.setScaleX(sc);
+        title.setScaleY(sc);
+        int color = ColorUtils.blendARGB(ThemesRepo.getColor(R.attr.textColorOnAccent), ThemesRepo.getColor(android.R.attr.colorAccent), cloudProfile ? 0f : backgroundProgress - boostyProgress);
+        title.setTextColor(color);
+        title.setTranslationY(ViewUtils.lerp(titleY, (ViewUtils.dp(52) - title.getHeight() * title.getScaleY()) / 2f, backgroundProgress));
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -468,7 +494,7 @@ public class SetupActivity extends AppCompatActivity {
 
     @EventHandler(runOnMainThread = true)
     public void onDataUpdated(BeamServerDataUpdatedEvent e) {
-        if (!about) {
+        if (!about && !boostyOnly && !cloudProfile) {
             boolean wasBoosty = BOOSTY_INDEX != -1;
             if (wasBoosty != BeamServerData.isBoostyAvailable()) {
                 setItems();
@@ -476,8 +502,18 @@ public class SetupActivity extends AppCompatActivity {
         }
     }
 
+    @EventHandler(runOnMainThread = true)
+    public void onCloudAuthStateUpdated(CloudLoginStateUpdatedEvent e) {
+        if (cloudProfile) {
+            cloudItem.bindLoginButton(true);
+            cloudItem.bindFeatures();
+        }
+    }
+
     private void setItems() {
-        if (boostyOnly) {
+        if (cloudProfile){
+            adapter.setItems(Collections.singletonList(cloudItem = new CloudProfileItem()));
+        } else if (boostyOnly) {
             adapter.setItems(Collections.singletonList(new BoostyItem()));
         } else if (about) {
             adapter.setItems(Collections.singletonList(new AboutItem()));
@@ -611,6 +647,323 @@ public class SetupActivity extends AppCompatActivity {
                 });
         pager.beginFakeDrag();
         fakeScroller.start();
+    }
+
+    private final class CloudProfileItem extends SimpleRecyclerItem<View> {
+        private FrameLayout buttonView;
+        private TextView buttonText;
+        private ProgressBar buttonProgress;
+        private RecyclerView recyclerView;
+
+        @Override
+        public View onCreateView(Context ctx) {
+            LinearLayout ll = new LinearLayout(ctx);
+            ll.setOrientation(LinearLayout.VERTICAL);
+            ll.setPadding(0, ViewUtils.dp(42), 0, 0);
+
+            TextView title = new TextView(ctx);
+            title.setTextColor(ThemesRepo.getColor(R.attr.textColorOnAccent));
+            title.setText(R.string.SettingsCloudManageDescription);
+            title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+            title.setGravity(Gravity.CENTER);
+            title.setPadding(ViewUtils.dp(12), 0, ViewUtils.dp(12), 0);
+            ll.addView(title);
+
+            FrameLayout fl = new FrameLayout(ctx);
+            recyclerView = new RecyclerView(ctx);
+            recyclerView.setLayoutManager(new LinearLayoutManager(ctx));
+            recyclerView.setAdapter(adapter = new SimpleRecyclerAdapter());
+            recyclerView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+            fl.addView(recyclerView, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
+            bindFeatures();
+
+            ll.addView(fl, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+
+            TextView tosButton = new TextView(ctx);
+            SpannableStringBuilder sb = SpannableStringBuilder.valueOf(ctx.getString(R.string.SettingsCloudManageTermsOfService)).append(" ");
+            Drawable dr = ContextCompat.getDrawable(ctx, R.drawable.external_link_outline_24);
+            int size = ViewUtils.dp(16);
+            dr.setBounds(0, 0, size, size);
+            sb.append("d", new TextColorImageSpan(dr, ViewUtils.dp(2f)), SpannableStringBuilder.SPAN_EXCLUSIVE_EXCLUSIVE);
+            tosButton.setText(sb);
+            tosButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+            tosButton.setTextColor(Color.WHITE);
+            tosButton.setTypeface(ViewUtils.getTypeface(ViewUtils.ROBOTO_MEDIUM));
+            tosButton.setGravity(Gravity.CENTER);
+            tosButton.setPadding(ViewUtils.dp(12), ViewUtils.dp(8), ViewUtils.dp(12), ViewUtils.dp(8));
+            tosButton.setBackground(ViewUtils.createRipple(ThemesRepo.getColor(android.R.attr.colorControlHighlight), 16));
+            tosButton.setOnClickListener(v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://beam3d.ru/slicebeam_cloud_tos.html"))));
+            ll.addView(tosButton, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(52)) {{
+                leftMargin = rightMargin = ViewUtils.dp(16);
+                bottomMargin = ViewUtils.dp(8);
+            }});
+
+            buttonView = new FrameLayout(ctx);
+            buttonView.setBackground(ViewUtils.createRipple(ThemesRepo.getColor(android.R.attr.colorControlHighlight), ThemesRepo.getColor(android.R.attr.colorAccent), 16));
+
+            buttonText = new TextView(ctx);
+            buttonText.setTextColor(ThemesRepo.getColor(R.attr.textColorOnAccent));
+            buttonText.setTypeface(ViewUtils.getTypeface(ViewUtils.ROBOTO_MEDIUM));
+            buttonText.setGravity(Gravity.CENTER);
+            buttonText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+            buttonView.addView(buttonText, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
+
+            buttonProgress = new ProgressBar(ctx);
+            buttonProgress.setIndeterminateTintList(ColorStateList.valueOf(ThemesRepo.getColor(R.attr.textColorOnAccent)));
+            buttonView.addView(buttonProgress, new FrameLayout.LayoutParams(ViewUtils.dp(28), ViewUtils.dp(28), Gravity.CENTER));
+
+            bindLoginButton(false);
+
+            ll.addView(buttonView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(52)) {{
+                leftMargin = rightMargin = ViewUtils.dp(16);
+                bottomMargin = ViewUtils.dp(16);
+            }});
+
+            ll.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            return ll;
+        }
+
+        private void bindFeatures() {
+            List<SimpleRecyclerItem> items = new ArrayList<>();
+            if (CloudController.getUserFeatures() != null) {
+                for (CloudAPI.SubscriptionLevel lvl : CloudController.getUserFeatures().levels) {
+                    items.add(new CloudSubscriptionLevel(lvl));
+                }
+            }
+            adapter.setItems(items);
+        }
+
+        private void bindLoginButton(boolean animate) {
+            boolean loggedIn = Prefs.getCloudAPIToken() != null;
+            boolean loading = !loggedIn && CloudController.isLoggingIn();
+            boolean wasLoading = buttonProgress.getTag() != null;
+            if (animate) {
+                if (wasLoading != loading) {
+                    buttonProgress.setTag(loading ? 1 : null);
+
+                    buttonProgress.animate().cancel();
+                    buttonProgress.animate().scaleX(loading ? 1f : 0.4f).scaleY(loading ? 1f : 0.4f).alpha(loading ? 1f : 0f).setDuration(150).setInterpolator(ViewUtils.CUBIC_INTERPOLATOR).setListener(new AnimatorListenerAdapter() {
+                        @Override
+                        public void onAnimationStart(Animator animation) {
+                            if (loading) {
+                                buttonProgress.setVisibility(View.VISIBLE);
+                                buttonProgress.setAlpha(0f);
+                                buttonProgress.setScaleX(0.4f);
+                                buttonProgress.setScaleY(0.4f);
+                            }
+                        }
+
+                        @Override
+                        public void onAnimationEnd(Animator animation) {
+                            if (!loading) {
+                                buttonProgress.setVisibility(View.GONE);
+                            }
+                        }
+                    }).start();
+
+                    buttonText.animate().cancel();
+                    buttonText.animate().scaleX(!loading ? 1f : 0.4f).scaleY(!loading ? 1f : 0.4f).alpha(!loading ? 1f : 0f).setDuration(150).setInterpolator(ViewUtils.CUBIC_INTERPOLATOR).setListener(new AnimatorListenerAdapter() {
+                        @Override
+                        public void onAnimationStart(Animator animation) {
+                            if (!loading) {
+                                buttonText.setVisibility(View.VISIBLE);
+                                buttonText.setAlpha(0f);
+                                buttonText.setScaleX(0.4f);
+                                buttonText.setScaleY(0.4f);
+                            }
+                        }
+
+                        @Override
+                        public void onAnimationEnd(Animator animation) {
+                            if (loading) {
+                                buttonText.setVisibility(View.GONE);
+                            }
+                        }
+                    }).start();
+                }
+            } else {
+                buttonProgress.setTag(loading ? 1 : null);
+                buttonProgress.setVisibility(loading ? View.VISIBLE : View.GONE);
+                buttonText.setVisibility(loading ? View.GONE : View.VISIBLE);
+            }
+            buttonText.setText(loggedIn ? R.string.SettingsCloudManageButtonManage : R.string.SettingsCloudManageButtonLogIn);
+            buttonView.setOnClickListener(v-> {
+                if (loading) {
+                    new BeamAlertDialogBuilder(v.getContext())
+                            .setTitle(R.string.SettingsCloudManageButtonLogInCancelTitle)
+                            .setMessage(R.string.SettingsCloudManageButtonLogInCancel)
+                            .setNegativeButton(R.string.No, null)
+                            .setPositiveButton(R.string.Yes, (dialog, which) -> CloudController.cancelLogin())
+                            .show();
+                } else if (Prefs.getCloudAPIToken() != null) {
+                    new CloudManageBottomSheet(v.getContext()).show();
+                } else {
+                    CloudController.beginLogin();
+                }
+            });
+        }
+    }
+
+    private final static class CloudSubscriptionLevel extends SimpleRecyclerItem<CloudSubscriptionLevel.LevelHolderView> {
+        private CloudAPI.SubscriptionLevel level;
+
+        private CloudSubscriptionLevel(CloudAPI.SubscriptionLevel level) {
+            this.level = level;
+        }
+
+        @Override
+        public LevelHolderView onCreateView(Context ctx) {
+            return new LevelHolderView(ctx);
+        }
+
+        @Override
+        public void onBindView(LevelHolderView view) {
+            view.bind(this);
+        }
+
+        public final static class LevelHolderView extends LinearLayout implements IThemeView {
+            private ImageView icon;
+            private TextView title;
+            private TextView price;
+
+            private RecyclerView featuresLayout;
+            private SimpleRecyclerAdapter featuresAdapter;
+
+            public LevelHolderView(@NonNull Context context) {
+                super(context);
+
+                setOrientation(VERTICAL);
+                setPadding(0, ViewUtils.dp(16), 0, ViewUtils.dp(8));
+
+                LinearLayout inner = new LinearLayout(context);
+                inner.setOrientation(HORIZONTAL);
+                inner.setGravity(Gravity.CENTER_VERTICAL);
+                inner.setPadding(ViewUtils.dp(28), 0, ViewUtils.dp(28), 0);
+                addView(inner, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT) {{
+                    bottomMargin = ViewUtils.dp(8);
+                }});
+
+                icon = new ImageView(context);
+                inner.addView(icon, new LayoutParams(ViewUtils.dp(26), ViewUtils.dp(26)));
+
+                title = new TextView(context);
+                title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+                title.setTypeface(ViewUtils.getTypeface(ViewUtils.ROBOTO_MEDIUM));
+                inner.addView(title, new LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f) {{
+                    leftMargin = ViewUtils.dp(12);
+                }});
+
+                price = new TextView(context);
+                price.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+                price.setTypeface(ViewUtils.getTypeface(ViewUtils.ROBOTO_MEDIUM));
+                inner.addView(price);
+
+                featuresLayout = new RecyclerView(context) {
+                    @Override
+                    public boolean dispatchTouchEvent(MotionEvent ev) {
+                        return false;
+                    }
+
+                    @Override
+                    protected boolean dispatchHoverEvent(MotionEvent event) {
+                        return false;
+                    }
+                };
+                featuresLayout.setLayoutManager(new LinearLayoutManager(context));
+                featuresLayout.setAdapter(featuresAdapter = new SimpleRecyclerAdapter());
+                addView(featuresLayout, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT) {{
+                    topMargin = ViewUtils.dp(3);
+                    leftMargin = rightMargin = ViewUtils.dp(16);
+                    bottomMargin = ViewUtils.dp(8);
+                }});
+
+                setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT) {{
+                    leftMargin = rightMargin = ViewUtils.dp(12);
+                    topMargin = ViewUtils.dp(12);
+                }});
+                onApplyTheme();
+            }
+
+            public void bind(CloudSubscriptionLevel item) {
+                CloudAPI.SubscriptionLevel lvl = item.level;
+                title.setText(lvl.title);
+                price.setText(lvl.price);
+                if (lvl.level <= 0) {
+                    icon.setImageResource(R.drawable.zero_ruble_outline_28);
+                    price.setText(R.string.SettingsCloudManageFree);
+                } else if (lvl.level == 1) {
+                    icon.setImageResource(R.drawable.stars_outline_28);
+                } else {
+                    icon.setImageResource(R.drawable.cloud_plus_outline_28);
+                }
+
+                List<SimpleRecyclerItem> items = new ArrayList<>();
+                CloudAPI.UserFeatures features = CloudController.getUserFeatures();
+                CloudAPI.UserInfo info = CloudController.getUserInfo();
+                Context ctx = getContext();
+                if (features.syncRequiredLevel != -1 && lvl.level >= features.syncRequiredLevel) {
+                    items.add(new PreferenceItem()
+                            .setForceDark(true)
+                            .setPaddings(ViewUtils.dp(8))
+                            .setIcon(R.drawable.sync_outline_28)
+                            .setTitle(ctx.getString(R.string.SettingsCloudManageFeatureCloudSync))
+                            .setSubtitle(ctx.getString(R.string.SettingsCloudManageFeatureCloudSyncDescription)));
+                }
+                if (features.aiGeneratorRequiredLevel != -1 && lvl.level >= features.aiGeneratorRequiredLevel) {
+                    items.add(new PreferenceItem()
+                            .setForceDark(true)
+                            .setPaddings(ViewUtils.dp(8))
+                            .setIcon(R.drawable.brain_outline_28)
+                            .setTitle(ctx.getString(R.string.SettingsCloudManageFeatureAIGenerator))
+                            .setSubtitle(ctx.getString(R.string.SettingsCloudManageFeatureAIGeneratorDescription, features.aiGeneratorModelsPerMonth)));
+                }
+                if (lvl.level > 0) {
+                    items.add(new PreferenceItem()
+                            .setForceDark(true)
+                            .setPaddings(ViewUtils.dp(8))
+                            .setIcon(R.drawable.box_heart_outline_28)
+                            .setTitle(ctx.getString(R.string.SettingsCloudManageFeatureFreeForAll))
+                            .setSubtitle(ctx.getString(R.string.SettingsCloudManageFeatureFreeForAllDescription)));
+                }
+                featuresAdapter.setItems(items);
+                featuresLayout.setVisibility(items.isEmpty() ? View.GONE : View.VISIBLE);
+
+                boolean subscribed = lvl.level > 0 && info != null && lvl.level == info.currentLevel;
+                boolean allowSubscribe = lvl.level > 0 && (info == null || lvl.level > info.currentLevel);
+                if (subscribed) {
+                    price.setText(R.string.SettingsCloudManageSubscribed);
+                }
+                price.setVisibility(allowSubscribe || subscribed ? View.VISIBLE : View.GONE);
+                setOnClickListener(v -> {
+                    if (subscribed) {
+                        v.getContext().startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(lvl.manageUrl)));
+                    } else {
+                        new BeamAlertDialogBuilder(getContext())
+                                .setTitle(lvl.title)
+                                .setMessage(R.string.SettingsCloudManageLevelRedirectMessage)
+                                .setPositiveButton(android.R.string.ok, (dialog, which) -> v.getContext().startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(lvl.subscribeOrUpgradeUrl))))
+                                .setNegativeButton(R.string.SettingsCloudManageLevelRedirectAlreadySubscribed, (dialog, which) -> v.getContext().startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(features.alreadySubscribedInfoUrl))))
+                                .show();
+                    }
+                });
+                setClickable(allowSubscribe || subscribed);
+                onApplyTheme();
+            }
+
+            @Override
+            public void onApplyTheme() {
+                int accent = ThemesRepo.getColor(android.R.attr.colorAccent);
+                if (ColorUtils.calculateLuminance(accent) >= 0.6f) {
+                    accent = ColorUtils.blendARGB(accent, Color.BLACK, 0.075f);
+                }
+                boolean tooLight = ColorUtils.calculateLuminance(accent) >= 0.6f;
+                title.setTextColor(0xffffffff);
+                price.setTextColor(0xffffffff);
+                icon.setImageTintList(ColorStateList.valueOf(0xffffffff));
+                featuresLayout.setBackground(ViewUtils.createRipple(0, tooLight ? 0x33ffffff : 0x21ffffff, 24));
+                setBackground(ViewUtils.createRipple(0x21000000, ColorUtils.blendARGB(0xffffffff, accent, tooLight ? 0.9f : 0.75f), 32));
+            }
+        }
     }
 
     private final class AboutItem extends SimpleRecyclerItem<View> {

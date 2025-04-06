@@ -23,6 +23,11 @@ public class ViewUtils {
     private static Handler uiHandler = new Handler(Looper.getMainLooper());
     private static Map<String, Typeface> typefaceCache = new HashMap<>();
 
+
+    public static Handler getUiHandler() {
+        return uiHandler;
+    }
+
     public static void postOnMainThread(Runnable runnable) {
         uiHandler.post(runnable);
     }

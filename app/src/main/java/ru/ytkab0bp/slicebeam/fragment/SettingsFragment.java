@@ -28,6 +28,7 @@ import ru.ytkab0bp.slicebeam.components.BeamAlertDialogBuilder;
 import ru.ytkab0bp.slicebeam.components.BeamColorPickerPopUp;
 import ru.ytkab0bp.slicebeam.config.ConfigObject;
 import ru.ytkab0bp.slicebeam.events.BeamServerDataUpdatedEvent;
+import ru.ytkab0bp.slicebeam.events.CloudUserInfoUpdatedEvent;
 import ru.ytkab0bp.slicebeam.recycler.PreferenceItem;
 import ru.ytkab0bp.slicebeam.theme.BeamTheme;
 import ru.ytkab0bp.slicebeam.theme.ThemesRepo;
@@ -45,6 +46,10 @@ public class SettingsFragment extends ProfileListFragment {
     @Override
     protected List<OptionElement> getConfigItems() {
         return Arrays.asList(
+                BeamServerData.isCloudAvailable() ? new OptionElement(SPECIAL_TYPE_CLOUD_HEADER).setOnClick(() -> {
+                    Activity act = (Activity) getContext();
+                    act.startActivity(new Intent(act, SetupActivity.class).putExtra(SetupActivity.EXTRA_CLOUD_PROFILE, true));
+                }) : null,
                 new OptionElement(R.drawable.paint_roller_outline_28, getContext().getString(R.string.SettingsInterface)),
                 new OptionElement(new PreferenceItem().setTitle(getContext().getString(R.string.SettingsInterfaceTheme)).setValueProvider(() -> getContext().getString(Prefs.getThemeMode().title)).setOnClickListener(v -> {
                     String[] items = new String[Prefs.ThemeMode.values().length];
@@ -107,7 +112,7 @@ public class SettingsFragment extends ProfileListFragment {
                                     BeamTheme.LIGHT.colors.put(android.R.attr.colorAccent, Prefs.getAccentColor());
                                     BeamTheme.DARK.colors.put(android.R.attr.colorAccent, Prefs.getAccentColor());
                                     ThemesRepo.invalidate((Activity) getContext());
-                                    recyclerView.getAdapter().notifyItemChanged(1);
+                                    recyclerView.getAdapter().notifyItemChanged(2 - (BeamServerData.isCloudAvailable() ? 0 : 1));
                                 }
                             })
                             .setNegativeButtonText(getContext().getString(R.string.SettingsInterfaceColorReset))
@@ -130,7 +135,7 @@ public class SettingsFragment extends ProfileListFragment {
                                 Prefs.setRenderScale(variants[which]);
                                 dialog.dismiss();
                                 // I'm too lazy to calculate real position for now
-                                recyclerView.getAdapter().notifyItemChanged(3);
+                                recyclerView.getAdapter().notifyItemChanged(4 - (BeamServerData.isCloudAvailable() ? 0 : 1));
                             })
                             .show();
                 })),
@@ -175,6 +180,13 @@ public class SettingsFragment extends ProfileListFragment {
     @EventHandler(runOnMainThread = true)
     public void onDataUpdated(BeamServerDataUpdatedEvent e) {
         setConfigItems(getConfigItems());
+    }
+
+    @EventHandler(runOnMainThread = true)
+    public void onUserInfoUpdated(CloudUserInfoUpdatedEvent e) {
+        if (BeamServerData.isCloudAvailable()) {
+            recyclerView.getAdapter().notifyItemChanged(0);
+        }
     }
 
     @Override

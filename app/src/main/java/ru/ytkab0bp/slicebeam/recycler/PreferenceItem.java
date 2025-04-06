@@ -21,6 +21,7 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import ru.ytkab0bp.slicebeam.SliceBeam;
+import ru.ytkab0bp.slicebeam.theme.BeamTheme;
 import ru.ytkab0bp.slicebeam.theme.IThemeView;
 import ru.ytkab0bp.slicebeam.theme.ThemesRepo;
 import ru.ytkab0bp.slicebeam.utils.ViewUtils;
@@ -35,6 +36,8 @@ public class PreferenceItem extends SimpleRecyclerItem<PreferenceItem.Preference
     private boolean noTint;
     private ValueProvider valueProvider;
     private float roundRadius;
+    private int mPaddings = ViewUtils.dp(12);
+    private boolean mForceDark;
 
     public PreferenceItem setTitle(CharSequence title) {
         mTitle = title;
@@ -43,6 +46,16 @@ public class PreferenceItem extends SimpleRecyclerItem<PreferenceItem.Preference
 
     public PreferenceItem setSubtitle(CharSequence subtitle) {
         mSubtitle = ()->subtitle;
+        return this;
+    }
+
+    public PreferenceItem setPaddings(int paddings) {
+        this.mPaddings = paddings;
+        return this;
+    }
+
+    public PreferenceItem setForceDark(boolean mForceDark) {
+        this.mForceDark = mForceDark;
         return this;
     }
 
@@ -112,6 +125,8 @@ public class PreferenceItem extends SimpleRecyclerItem<PreferenceItem.Preference
         private TextView value;
         private float radius;
 
+        private PreferenceItem item;
+
         public PreferenceHolderView(Context context) {
             super(context);
 
@@ -165,14 +180,14 @@ public class PreferenceItem extends SimpleRecyclerItem<PreferenceItem.Preference
             value.setVisibility(GONE);
             addView(value, new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-            int pad = ViewUtils.dp(12);
-            setPadding(pad, pad, pad, pad);
             setMinimumHeight(ViewUtils.dp(56));
             setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             onApplyTheme();
         }
 
         void bind(PreferenceItem item) {
+            this.item = item;
+            setPadding(item.mPaddings, item.mPaddings, item.mPaddings, item.mPaddings);
             title.setText(item.mTitle);
             title.setVisibility(TextUtils.isEmpty(item.mTitle) ? GONE : VISIBLE);
 
@@ -217,15 +232,19 @@ public class PreferenceItem extends SimpleRecyclerItem<PreferenceItem.Preference
 
             ViewGroup.LayoutParams params = icon.getLayoutParams();
             params.width = params.height = radius != 0 ? ViewUtils.dp(42) : ViewUtils.dp(28);
+            if (item.mForceDark) {
+                onApplyTheme();
+            }
         }
 
         @Override
         public void onApplyTheme() {
-            title.setTextColor(ThemesRepo.getColor(android.R.attr.textColorPrimary));
-            subtitle.setTextColor(ThemesRepo.getColor(android.R.attr.textColorSecondary));
-            value.setTextColor(ThemesRepo.getColor(android.R.attr.textColorSecondary));
-            icon.setImageTintList(ColorStateList.valueOf(ThemesRepo.getColor(android.R.attr.textColorSecondary)));
-            setBackground(ViewUtils.createRipple(ThemesRepo.getColor(android.R.attr.colorControlHighlight), 16));
+            BeamTheme theme = item != null && item.mForceDark ? BeamTheme.DARK : ThemesRepo.getCurrent();
+            title.setTextColor(theme.colors.get(android.R.attr.textColorPrimary));
+            subtitle.setTextColor(theme.colors.get(android.R.attr.textColorSecondary));
+            value.setTextColor(theme.colors.get(android.R.attr.textColorSecondary));
+            icon.setImageTintList(ColorStateList.valueOf(theme.colors.get(android.R.attr.textColorSecondary)));
+            setBackground(ViewUtils.createRipple(theme.colors.get(android.R.attr.colorControlHighlight), 16));
         }
     }
 
