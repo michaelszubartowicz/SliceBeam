@@ -97,6 +97,7 @@ import ru.ytkab0bp.slicebeam.config.ConfigObject;
 import ru.ytkab0bp.slicebeam.events.BeamServerDataUpdatedEvent;
 import ru.ytkab0bp.slicebeam.events.CloudFeaturesUpdatedEvent;
 import ru.ytkab0bp.slicebeam.events.CloudLoginStateUpdatedEvent;
+import ru.ytkab0bp.slicebeam.events.CloudSyncFinishedEvent;
 import ru.ytkab0bp.slicebeam.recycler.BigHeaderItem;
 import ru.ytkab0bp.slicebeam.recycler.PreferenceItem;
 import ru.ytkab0bp.slicebeam.recycler.SimpleRecyclerAdapter;
@@ -510,19 +511,27 @@ public class SetupActivity extends AppCompatActivity {
         }
     }
 
+    @SuppressLint("NotifyDataSetChanged")
+    @EventHandler(runOnMainThread = true)
+    public void onCloudSyncFinished(CloudSyncFinishedEvent e) {
+        if (cloudProfile && Prefs.getCloudAPIToken() != null && cloudImport) {
+            finish();
+        }
+        if (!about && !boostyOnly && !cloudProfile) {
+            if (Prefs.getCloudAPIToken() != null) {
+                limitRepoFragmentCount = false;
+                limitProfileFragmentCount = false;
+                pager.getAdapter().notifyDataSetChanged();
+                pager.setCurrentItem(pager.getAdapter().getItemCount() - 1);
+            }
+        }
+    }
+
     @EventHandler(runOnMainThread = true)
     public void onCloudAuthStateUpdated(CloudLoginStateUpdatedEvent e) {
         if (cloudProfile) {
             cloudItem.bindLoginButton(true);
             cloudItem.bindFeatures();
-
-            if (Prefs.getCloudAPIToken() != null && cloudImport) {
-                finish();
-            }
-        } else if (!about && !boostyOnly) {
-            if (Prefs.getCloudAPIToken() != null) {
-                pager.setCurrentItem(pager.getAdapter().getItemCount() - 1);
-            }
         }
     }
 
@@ -1254,7 +1263,10 @@ public class SetupActivity extends AppCompatActivity {
         }
 
         public void onCloudInfoUpdated() {
-            cloudImportView.setVisibility(BeamServerData.isCloudAvailable() ? View.VISIBLE : View.GONE);
+            if (cloudImportView != null) {
+                cloudImportView.setVisibility(BeamServerData.isCloudAvailable() ? View.VISIBLE : View.GONE);
+                cloudOrView.setVisibility(BeamServerData.isCloudAvailable() ? View.VISIBLE : View.GONE);
+            }
         }
 
         public void onReposLoaded() {
@@ -1617,11 +1629,13 @@ public class SetupActivity extends AppCompatActivity {
                     }
                 }
                 try {
-                    SliceBeam.getCurrentConfigFile().delete();
-                    SliceBeam.CONFIG = cfg;
-                    FileOutputStream fos = new FileOutputStream(SliceBeam.getConfigFile());
-                    fos.write(cfg.serialize().getBytes(StandardCharsets.UTF_8));
-                    fos.close();
+                    if (Prefs.getCloudAPIToken() == null || SliceBeam.CONFIG == null) {
+                        SliceBeam.getCurrentConfigFile().delete();
+                        SliceBeam.CONFIG = cfg;
+                        FileOutputStream fos = new FileOutputStream(SliceBeam.getConfigFile());
+                        fos.write(cfg.serialize().getBytes(StandardCharsets.UTF_8));
+                        fos.close();
+                    }
 
                     startActivity(new Intent(SetupActivity.this, MainActivity.class));
                     finish();

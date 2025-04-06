@@ -24,6 +24,7 @@ import ru.ytkab0bp.slicebeam.components.BeamAlertDialogBuilder;
 import ru.ytkab0bp.slicebeam.events.CloudFeaturesUpdatedEvent;
 import ru.ytkab0bp.slicebeam.events.CloudLoginStateUpdatedEvent;
 import ru.ytkab0bp.slicebeam.events.CloudModelsRemainingCountUpdatedEvent;
+import ru.ytkab0bp.slicebeam.events.CloudSyncFinishedEvent;
 import ru.ytkab0bp.slicebeam.events.CloudUserInfoUpdatedEvent;
 import ru.ytkab0bp.slicebeam.events.NeedDismissSnackbarEvent;
 import ru.ytkab0bp.slicebeam.events.NeedSnackbarEvent;
@@ -297,12 +298,14 @@ public class CloudController {
                         Prefs.setCloudLastSync(SliceBeam.TRUE_TIME.now().getTime());
                         SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(CLOUD_SYNC_TAG));
                         SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(R.string.CloudSyncSuccess));
+                        SliceBeam.EVENT_BUS.fireEvent(new CloudSyncFinishedEvent());
                     } catch (IOException e) {
                         Log.e(TAG, "Failed to write data", e);
                         isSyncInProgress = false;
 
                         SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(CLOUD_SYNC_TAG));
                         SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.ERROR, R.string.CloudSyncError));
+                        SliceBeam.EVENT_BUS.fireEvent(new CloudSyncFinishedEvent());
                     }
                 });
             }
@@ -314,6 +317,7 @@ public class CloudController {
 
                 SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(CLOUD_SYNC_TAG));
                 SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.ERROR, R.string.CloudSyncError));
+                SliceBeam.EVENT_BUS.fireEvent(new CloudSyncFinishedEvent());
             }
         });
     }
@@ -335,6 +339,7 @@ public class CloudController {
                 } else if (response.usedSize == 0) {
                     if (SliceBeam.CONFIG == null) {
                         SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(CLOUD_SYNC_TAG));
+                        SliceBeam.EVENT_BUS.fireEvent(new CloudSyncFinishedEvent());
                         return;
                     }
 
@@ -364,6 +369,7 @@ public class CloudController {
                     } else {
                         // Not modified on server and on client
                         SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(CLOUD_SYNC_TAG));
+                        SliceBeam.EVENT_BUS.fireEvent(new CloudSyncFinishedEvent());
                     }
                 }
             }
@@ -406,6 +412,7 @@ public class CloudController {
                         Prefs.setCloudLastSync(SliceBeam.TRUE_TIME.now().getTime());
                         SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(CLOUD_SYNC_TAG));
                         SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(R.string.CloudSyncSuccess));
+                        SliceBeam.EVENT_BUS.fireEvent(new CloudSyncFinishedEvent());
                     }
 
                     @Override
@@ -415,6 +422,7 @@ public class CloudController {
 
                         SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(CLOUD_SYNC_TAG));
                         SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.ERROR, R.string.CloudSyncError));
+                        SliceBeam.EVENT_BUS.fireEvent(new CloudSyncFinishedEvent());
                     }
                 });
             } catch (IOException e) {
@@ -423,6 +431,7 @@ public class CloudController {
 
                 SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(CLOUD_SYNC_TAG));
                 SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.ERROR, R.string.CloudSyncError));
+                SliceBeam.EVENT_BUS.fireEvent(new CloudSyncFinishedEvent());
             }
         });
     }
