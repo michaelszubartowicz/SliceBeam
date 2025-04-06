@@ -29,6 +29,7 @@
     <string name="MenuFileAIGeneratorError">Failed to generate model</string>
     <string name="MenuFileAIGeneratorSavedAs">Saved model as %s.</string>
     <string name="MenuFileAIGeneratorNoGenerationsLeft">No generations left.</string>
+    <string name="MenuFileAIGeneratorAlreadyGenerating">Already generating another model.</string>
     <string name="MenuFileCalibrations">Calibrat.</string>
     <string name="MenuFileCalibrationsLA">K3D Linear Advance</string>
     <string name="MenuFileCalibrationsLADescription">Linear/Pressure Advance Calibration</string>
@@ -175,12 +176,14 @@
     <string name="SettingsCloudTapToShowMore">Tap to learn more</string>
     <string name="SettingsCloudManageTitle">Beam 3D Account</string>
     <string name="SettingsCloudManageDescription">Provides the following benefits:</string>
+    <string name="SettingsCloudManageFeatureEarlyAccess">Early access</string>
+    <string name="SettingsCloudManageFeatureEarlyAccessDescription">You can download early builds from Telegram chat for subscribers</string>
     <string name="SettingsCloudManageFeatureCloudSync">Cloud profiles sync</string>
     <string name="SettingsCloudManageFeatureCloudSyncDescription">Store your profiles in Beam Cloud</string>
     <string name="SettingsCloudManageFeatureAIGenerator">AI model generator</string>
     <string name="SettingsCloudManageFeatureAIGeneratorDescription">%1$d models from photo per month</string>
     <string name="SettingsCloudManageFeatureFreeForAll">Slice Beam can remain free for all</string>
-    <string name="SettingsCloudManageFeatureFreeForAllDescription">Thanks for your support!</string>
+    <string name="SettingsCloudManageFeatureFreeForAllDescription">Your nickname will be written in the list of supporters.\nThanks for your support!</string>
     <string name="SettingsCloudManageLevelRedirectMessage">By subscribing to this level you accept terms of service.</string>
     <string name="SettingsCloudManageLevelRedirectAlreadySubscribed">Already subscribed?</string>
     <string name="SettingsCloudManageFree">Free</string>

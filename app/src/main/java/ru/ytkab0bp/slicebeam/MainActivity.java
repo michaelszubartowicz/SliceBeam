@@ -85,6 +85,8 @@ public class MainActivity extends AppCompatActivity {
     public static List<ConfigObject> EXPORTING_FILAMENTS;
     public static List<ConfigObject> EXPORTING_PRINTERS;
 
+    public static boolean IS_GENERATING_AI_MODEL;
+
     public static File aiTempFile;
 
     private static SparseArray<NavigationDelegate> liveDelegate = new SparseArray<>();
@@ -489,6 +491,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void generateAiModel(Bitmap bm) {
+        IS_GENERATING_AI_MODEL = true;
         String uploadTag = UUID.randomUUID().toString();
         SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.LOADING, R.string.MenuFileAIGeneratorUploading).tag(uploadTag));
         IOUtils.IO_POOL.submit(()->{
@@ -572,6 +575,7 @@ public class MainActivity extends AppCompatActivity {
                     SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(R.string.MenuFileAIGeneratorSavedAs, fileName));
                     loadFile(f, true);
                     CloudController.checkGeneratorRemaining();
+                    IS_GENERATING_AI_MODEL = false;
                 }
 
                 @Override
@@ -582,6 +586,7 @@ public class MainActivity extends AppCompatActivity {
                             .setMessage(e.toString())
                             .setPositiveButton(android.R.string.ok, null)
                             .show());
+                    IS_GENERATING_AI_MODEL = false;
                 }
             });
             SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(uploadTag));

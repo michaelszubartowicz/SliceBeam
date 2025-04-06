@@ -28,6 +28,7 @@
     <string name="MenuFileAIGeneratorError">Не удалось сгенерировать модель</string>
     <string name="MenuFileAIGeneratorSavedAs">Модель сохранена как %s.</string>
     <string name="MenuFileAIGeneratorNoGenerationsLeft">Не осталось генераций.</string>
+    <string name="MenuFileAIGeneratorAlreadyGenerating">Уже генерируется другая модель.</string>
     <string name="MenuFileCalibrations">Калибров.</string>
     <string name="MenuFileCalibrationsLA">K3D Linear Advance</string>
     <string name="MenuFileCalibrationsLADescription">Калибровка Linear/Pressure Advance</string>
@@ -173,12 +174,14 @@
     <string name="SettingsCloudTapToShowMore">Нажмите чтобы узнать больше</string>
     <string name="SettingsCloudManageTitle">Аккаунт Beam 3D</string>
     <string name="SettingsCloudManageDescription">Даёт следующие преимущества:</string>
+    <string name="SettingsCloudManageFeatureEarlyAccess">Ранний доступ</string>
+    <string name="SettingsCloudManageFeatureEarlyAccessDescription">Вы можете скачать ранние сборки из чата Telegram для подписчиков</string>
     <string name="SettingsCloudManageFeatureCloudSync">Облачная синхронизация профилей</string>
     <string name="SettingsCloudManageFeatureCloudSyncDescription">Храните свои профили в облаке Beam</string>
     <string name="SettingsCloudManageFeatureAIGenerator">ИИ генератор моделей</string>
     <string name="SettingsCloudManageFeatureAIGeneratorDescription">%1$d моделей по фото в месяц</string>
     <string name="SettingsCloudManageFeatureFreeForAll">Slice Beam может оставаться бесплатным для всех</string>
-    <string name="SettingsCloudManageFeatureFreeForAllDescription">Спасибо за вашу поддержку!</string>
+    <string name="SettingsCloudManageFeatureFreeForAllDescription">Ваш ник будет написан в списке поддержавших.\nСпасибо за вашу поддержку!</string>
     <string name="SettingsCloudManageLevelRedirectMessage">При подписке на данный уровень вы соглашаетесь с условиями обслуживания.</string>
     <string name="SettingsCloudManageLevelRedirectAlreadySubscribed">Уже подписаны?</string>
     <string name="SettingsCloudManageFree">Бесплатно</string>

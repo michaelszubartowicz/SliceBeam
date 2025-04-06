@@ -203,19 +203,27 @@ public class Prefs {
         mPrefs.edit().putLong("cloud_last_sync", ls).apply();
     }
 
-    public static long getLocalLastModified() {
+    public static long getCloudLocalLastSentModified() {
+        return mPrefs.getLong("cloud_local_last_sent_modified", 0);
+    }
+
+    public static void setCloudLocalLastSentModified(long lm) {
+        mPrefs.edit().putLong("cloud_local_last_sent_modified", lm).apply();
+    }
+
+    public static long getCloudLocalLastModified() {
         return mPrefs.getLong("cloud_local_last_modified", 0);
     }
 
-    public static void setLocalLastModified(long lm) {
+    public static void setCloudLocalLastModified(long lm) {
         mPrefs.edit().putLong("cloud_local_last_modified", lm).apply();
     }
 
-    public static long getRemoteLastModified() {
+    public static long getCloudRemoteLastModified() {
         return mPrefs.getLong("cloud_remote_last_modified", 0);
     }
 
-    public static void setRemoteLastModified(long lm) {
+    public static void setCloudRemoteLastModified(long lm) {
         mPrefs.edit().putLong("cloud_remote_last_modified", lm).apply();
     }
 

@@ -22,6 +22,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.opengl.GLSurfaceView;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
@@ -653,7 +654,7 @@ public class SetupActivity extends AppCompatActivity {
         private FrameLayout buttonView;
         private TextView buttonText;
         private ProgressBar buttonProgress;
-        private RecyclerView recyclerView;
+        private FadeRecyclerView recyclerView;
 
         @Override
         public View onCreateView(Context ctx) {
@@ -670,8 +671,8 @@ public class SetupActivity extends AppCompatActivity {
             ll.addView(title);
 
             FrameLayout fl = new FrameLayout(ctx);
-            recyclerView = new RecyclerView(ctx);
-            recyclerView.setLayoutManager(new LinearLayoutManager(ctx));
+            recyclerView = new FadeRecyclerView(ctx);
+            recyclerView.setBitmapMode();
             recyclerView.setAdapter(adapter = new SimpleRecyclerAdapter());
             recyclerView.setOverScrollMode(View.OVER_SCROLL_NEVER);
             fl.addView(recyclerView, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
@@ -901,6 +902,14 @@ public class SetupActivity extends AppCompatActivity {
                 CloudAPI.UserFeatures features = CloudController.getUserFeatures();
                 CloudAPI.UserInfo info = CloudController.getUserInfo();
                 Context ctx = getContext();
+                if (!BuildConfig.IS_GOOGLE_PLAY && features.earlyAccessLevel != -1 && lvl.level >= features.earlyAccessLevel) {
+                    items.add(new PreferenceItem()
+                            .setForceDark(true)
+                            .setPaddings(ViewUtils.dp(8))
+                            .setIcon(R.drawable.clock_circle_dashed_outline_24)
+                            .setTitle(ctx.getString(R.string.SettingsCloudManageFeatureEarlyAccess))
+                            .setSubtitle(ctx.getString(R.string.SettingsCloudManageFeatureEarlyAccessDescription)));
+                }
                 if (features.syncRequiredLevel != -1 && lvl.level >= features.syncRequiredLevel) {
                     items.add(new PreferenceItem()
                             .setForceDark(true)

@@ -92,8 +92,8 @@ public interface CloudAPI extends APIRunner {
      * <p>
      * Requires authorization
      */
-    @Method("sync/upload")
-    void syncUpload(@Arg("data") String data, APICallback<SyncState> callback);
+    @Method(requestType = RequestType.POST, value = "sync/upload")
+    void syncUpload(@Arg("") String data, @Header("Content-Type") String type, APICallback<SyncState> callback);
 
     /**
      * Downloads base64 data
@@ -159,6 +159,11 @@ public interface CloudAPI extends APIRunner {
     }
 
     final class UserFeatures {
+        /**
+         * Which level is required for early access
+         */
+        public int earlyAccessLevel;
+
         /**
          * Which level is required for data sync
          */

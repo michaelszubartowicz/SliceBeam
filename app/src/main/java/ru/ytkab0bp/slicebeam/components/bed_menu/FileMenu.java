@@ -303,6 +303,10 @@ public class FileMenu extends ListBedMenu {
                             SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.ERROR, R.string.MenuFileAIGeneratorNoGenerationsLeft));
                             return;
                         }
+                        if (MainActivity.IS_GENERATING_AI_MODEL) {
+                            SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.WARNING, R.string.MenuFileAIGeneratorAlreadyGenerating));
+                            return;
+                        }
                         if (ctx instanceof MainActivity) {
                             try {
                                 MainActivity.aiTempFile = File.createTempFile("ai_capture", ".jpg");
@@ -318,6 +322,10 @@ public class FileMenu extends ListBedMenu {
                     new PreferenceItem().setIcon(R.drawable.picture_outline_28).setTitle(ctx.getString(R.string.MenuFileAIGeneratorFromGallery)).setOnClickListener(v -> {
                         if (CloudController.getGeneratedModels() >= CloudController.getMaxGeneratedModels()) {
                             SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.ERROR, R.string.MenuFileAIGeneratorNoGenerationsLeft));
+                            return;
+                        }
+                        if (MainActivity.IS_GENERATING_AI_MODEL) {
+                            SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.WARNING, R.string.MenuFileAIGeneratorAlreadyGenerating));
                             return;
                         }
                         if (ctx instanceof MainActivity) {

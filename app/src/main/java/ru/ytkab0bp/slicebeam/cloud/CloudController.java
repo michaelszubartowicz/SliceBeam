@@ -2,27 +2,40 @@ package ru.ytkab0bp.slicebeam.cloud;
 
 import android.content.Intent;
 import android.net.Uri;
+import android.util.Base64;
 import android.util.Log;
 
 import com.google.gson.Gson;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 import ru.ytkab0bp.sapil.APICallback;
 import ru.ytkab0bp.sapil.APIRequestHandle;
 import ru.ytkab0bp.slicebeam.R;
 import ru.ytkab0bp.slicebeam.SliceBeam;
+import ru.ytkab0bp.slicebeam.components.BeamAlertDialogBuilder;
 import ru.ytkab0bp.slicebeam.events.CloudFeaturesUpdatedEvent;
 import ru.ytkab0bp.slicebeam.events.CloudLoginStateUpdatedEvent;
 import ru.ytkab0bp.slicebeam.events.CloudModelsRemainingCountUpdatedEvent;
 import ru.ytkab0bp.slicebeam.events.CloudUserInfoUpdatedEvent;
 import ru.ytkab0bp.slicebeam.events.NeedDismissSnackbarEvent;
 import ru.ytkab0bp.slicebeam.events.NeedSnackbarEvent;
+import ru.ytkab0bp.slicebeam.slic3r.Slic3rConfigWrapper;
+import ru.ytkab0bp.slicebeam.utils.IOUtils;
 import ru.ytkab0bp.slicebeam.utils.Prefs;
 import ru.ytkab0bp.slicebeam.utils.ViewUtils;
 import ru.ytkab0bp.slicebeam.view.SnackbarsLayout;
 
 public class CloudController {
     public final static String USER_INFO_AI_GEN_TAG = "ai_gen_user_info";
-    private final static String CLOUD_SYNC_TAG = "cloud_sync";
+    public final static String CLOUD_SYNC_TAG = "cloud_sync";
 
     private final static String TAG = "cloud";
     private final static long MIN_SYNC_DELTA = 5 * 60 * 1000L; // Once in 5 minutes
@@ -71,11 +84,20 @@ public class CloudController {
 
     private static Gson gson = new Gson();
 
-    public static void init() {
+    public static void initCached() {
         if (Prefs.getCloudCachedUserFeatures() != null) {
             userFeatures = gson.fromJson(Prefs.getCloudCachedUserFeatures(), CloudAPI.UserFeatures.class);
-            SliceBeam.EVENT_BUS.fireEvent(new CloudFeaturesUpdatedEvent());
         }
+        if (Prefs.getCloudAPIToken() != null) {
+            if (Prefs.getCloudCachedUserInfo() != null) {
+                userInfo = gson.fromJson(Prefs.getCloudCachedUserInfo(), CloudAPI.UserInfo.class);
+                modelsUsed = Prefs.getCloudCachedUsedModels();
+                modelsMaxGenerations = Prefs.getCloudCachedMaxModels();
+            }
+        }
+    }
+
+    public static void init() {
         long now = SliceBeam.TRUE_TIME.now().getTime();
         boolean needSyncInfo = userFeatures == null || now - Prefs.getCloudLastFeaturesSync() > MIN_SYNC_FEATURES_DELTA;
         if (needSyncInfo) {
@@ -83,14 +105,14 @@ public class CloudController {
         }
 
         if (Prefs.getCloudAPIToken() != null) {
-            if (Prefs.getCloudCachedUserInfo() != null) {
-                userInfo = gson.fromJson(Prefs.getCloudCachedUserInfo(), CloudAPI.UserInfo.class);
-                modelsUsed = Prefs.getCloudCachedUsedModels();
-                modelsMaxGenerations = Prefs.getCloudCachedMaxModels();
-            }
-
             if (needSyncInfo || userInfo == null) {
                 loadUserInfo();
+            }
+
+            if (!needSyncInfo && userInfo != null && isSyncAvailable() && Prefs.isCloudProfileSyncEnabled()) {
+                if (now - Prefs.getCloudLastSync() > MIN_SYNC_DELTA) {
+                    syncData();
+                }
             }
         }
     }
@@ -123,10 +145,7 @@ public class CloudController {
                     }
 
                     if (isSyncAvailable() && Prefs.isCloudProfileSyncEnabled()) {
-                        long now = SliceBeam.TRUE_TIME.now().getTime();
-                        if (now != Prefs.getLocalLastModified()) {
-                            sendData();
-                        }
+                        syncData();
                     }
                     checkGeneratorRemaining();
                 }
@@ -254,30 +273,140 @@ public class CloudController {
         return modelsMaxGenerations;
     }
 
-    private static void sendData() {
-        if (isSyncInProgress) {
-            return;
-        }
-        // TODO: IMPORTANT: Check getState first, then show conflict info
-        long modified = Prefs.getLocalLastModified();
-        isSyncInProgress = true;
-        SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.LOADING, R.string.CloudSyncInProgress).tag(CLOUD_SYNC_TAG));
-        CloudAPI.INSTANCE.syncUpload("", new APICallback<CloudAPI.SyncState>() {
+    private static void downloadData(long lastModified) {
+        CloudAPI.INSTANCE.syncGet(new APICallback<String>() {
             @Override
-            public void onResponse(CloudAPI.SyncState response) {
-                isSyncInProgress = false;
-                if (Prefs.getLocalLastModified() != modified) { // Re-send otherwise
-                    sendData();
-                    return;
-                }
-                Prefs.setCloudLastSync(modified);
-                SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(CLOUD_SYNC_TAG));
-                SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(R.string.CloudSyncSuccess));
+            public void onResponse(String response) {
+                IOUtils.IO_POOL.submit(() -> {
+                    try {
+                        File f = SliceBeam.getConfigFile();
+                        byte[] data = Base64.decode(response, 0);
+                        FileOutputStream fos = new FileOutputStream(f);
+                        fos.write(data);
+                        fos.close();
+
+                        SliceBeam.CONFIG = new Slic3rConfigWrapper(f);
+
+                        Prefs.setCloudLocalLastModified(lastModified);
+                        Prefs.setCloudLocalLastSentModified(lastModified);
+                        Prefs.setCloudRemoteLastModified(lastModified);
+                        Prefs.setCloudLastSync(SliceBeam.TRUE_TIME.now().getTime());
+                        SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(CLOUD_SYNC_TAG));
+                        SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(R.string.CloudSyncSuccess));
+                    } catch (IOException e) {
+                        Log.e(TAG, "Failed to write data", e);
+                        isSyncInProgress = false;
+
+                        SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(CLOUD_SYNC_TAG));
+                        SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.ERROR, R.string.CloudSyncError));
+                    }
+                });
             }
 
             @Override
             public void onException(Exception e) {
-                Log.e(TAG, "Failed to upload sync data", e);
+                Log.e(TAG, "Failed to download data", e);
+                isSyncInProgress = false;
+
+                SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(CLOUD_SYNC_TAG));
+                SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.ERROR, R.string.CloudSyncError));
+            }
+        });
+    }
+
+    private static void syncData() {
+        if (isSyncInProgress) {
+            return;
+        }
+        long modified = Prefs.getCloudLocalLastModified();
+        isSyncInProgress = true;
+        SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.LOADING, R.string.CloudSyncInProgress).tag(CLOUD_SYNC_TAG));
+
+        CloudAPI.INSTANCE.syncGetState(new APICallback<CloudAPI.SyncState>() {
+            @Override
+            public void onResponse(CloudAPI.SyncState response) {
+                if (response.usedSize == 0) {
+                    // No data on server yet, send anyway
+                    uploadData(modified);
+                } else if (response.lastUpdatedDate != Prefs.getCloudRemoteLastModified()) {
+                    if (Prefs.getCloudLocalLastSentModified() == modified) {
+                        // Modified only on server
+                        downloadData(response.lastUpdatedDate);
+                    } else {
+                        // Modified on client and on server
+                        SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(CLOUD_SYNC_TAG));
+                        SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.WARNING, R.string.CloudSyncConflict).button(R.string.CloudSyncConflictResolve, v -> {
+                            SimpleDateFormat format = new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault());
+                            new BeamAlertDialogBuilder(v.getContext())
+                                    .setTitle(R.string.CloudSyncConflict)
+                                    .setMessage(v.getContext().getString(R.string.CloudSyncConflictResolveMessage, format.format(new Date(response.lastUpdatedDate)), format.format(new Date(Prefs.getCloudLocalLastModified()))))
+                                    .setPositiveButton(R.string.CloudSyncConflictChooseRemote, (dialog, which) -> downloadData(response.lastUpdatedDate))
+                                    .setNegativeButton(R.string.CloudSyncConflictChooseLocal, (dialog, which) -> uploadData(modified))
+                                    .show();
+                        }).tag(CLOUD_SYNC_TAG));
+                    }
+                } else {
+                    if (Prefs.getCloudLocalLastSentModified() != modified) {
+                        // Modified only on client
+                        uploadData(modified);
+                    } else {
+                        // Not modified on server and on client
+                        SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(CLOUD_SYNC_TAG));
+                    }
+                }
+            }
+
+            @Override
+            public void onException(Exception e) {
+                Log.e(TAG, "Failed to get sync state", e);
+                isSyncInProgress = false;
+
+                SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(CLOUD_SYNC_TAG));
+                SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.ERROR, R.string.CloudSyncError));
+            }
+        });
+    }
+
+    private static void uploadData(long modified) {
+        IOUtils.IO_POOL.submit(() -> {
+            try {
+                File f = SliceBeam.getConfigFile();
+                FileInputStream fis = new FileInputStream(f);
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                byte[] buffer = new byte[10240];
+                int c;
+                while ((c = fis.read(buffer)) != -1) {
+                    bos.write(buffer, 0, c);
+                }
+                bos.close();
+                fis.close();
+
+                CloudAPI.INSTANCE.syncUpload(Base64.encodeToString(bos.toByteArray(), Base64.NO_WRAP), "application/ini", new APICallback<CloudAPI.SyncState>() {
+                    @Override
+                    public void onResponse(CloudAPI.SyncState response) {
+                        isSyncInProgress = false;
+                        if (Prefs.getCloudLocalLastModified() != modified) { // Re-send otherwise
+                            syncData();
+                            return;
+                        }
+                        Prefs.setCloudRemoteLastModified(response.lastUpdatedDate);
+                        Prefs.setCloudLocalLastSentModified(modified);
+                        Prefs.setCloudLastSync(SliceBeam.TRUE_TIME.now().getTime());
+                        SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(CLOUD_SYNC_TAG));
+                        SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(R.string.CloudSyncSuccess));
+                    }
+
+                    @Override
+                    public void onException(Exception e) {
+                        Log.e(TAG, "Failed to upload sync data", e);
+                        isSyncInProgress = false;
+
+                        SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(CLOUD_SYNC_TAG));
+                        SliceBeam.EVENT_BUS.fireEvent(new NeedSnackbarEvent(SnackbarsLayout.Type.ERROR, R.string.CloudSyncError));
+                    }
+                });
+            } catch (IOException e) {
+                Log.e(TAG, "Failed to read sync data", e);
                 isSyncInProgress = false;
 
                 SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(CLOUD_SYNC_TAG));
@@ -288,12 +417,12 @@ public class CloudController {
 
     public static void notifyDataChanged() {
         long now = SliceBeam.TRUE_TIME.now().getTime();
-        Prefs.setLocalLastModified(now);
+        Prefs.setCloudLocalLastModified(now);
         if (!isSyncAvailable() || !Prefs.isCloudProfileSyncEnabled()) {
             return;
         }
         if (now - Prefs.getCloudLastSync() > MIN_SYNC_DELTA) {
-            sendData();
+            syncData();
         }
     }
 }

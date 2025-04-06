@@ -1,9 +1,13 @@
 package ru.ytkab0bp.slicebeam.view;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
 import android.graphics.Shader;
 import android.view.View;
 
@@ -24,6 +28,10 @@ public class FadeRecyclerView extends RecyclerView implements IThemeView {
 
     private float topProgress, bottomProgress;
     private float overlayAlpha = 1f;
+
+    private Bitmap bitmap;
+    private Canvas bitmapCanvas;
+    private boolean bitmapMode;
 
     public FadeRecyclerView(@NonNull Context context) {
         super(context);
@@ -52,6 +60,16 @@ public class FadeRecyclerView extends RecyclerView implements IThemeView {
         onApplyTheme();
     }
 
+    /**
+     * Very heavy, should be used only if transparent background is really needed
+     */
+    public void setBitmapMode() {
+        this.bitmapMode = true;
+        topPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_IN));
+        bottomPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_IN));
+        invalidateShaders();
+    }
+
     public void setOverlayAlpha(float overlayAlpha) {
         this.overlayAlpha = overlayAlpha;
         invalidate();
@@ -59,15 +77,56 @@ public class FadeRecyclerView extends RecyclerView implements IThemeView {
 
     @Override
     public void draw(Canvas c) {
-        super.draw(c);
+        Canvas cv;
+        if (bitmapMode) {
+            if (bitmap == null || bitmap.getWidth() != getWidth() || bitmap.getHeight() != getHeight()) {
+                if (bitmap != null) {
+                    bitmap.recycle();
+                }
+                bitmap = Bitmap.createBitmap(getWidth(), getHeight(), Bitmap.Config.ARGB_8888);
+                bitmapCanvas = new Canvas(bitmap);
+            }
+            bitmap.eraseColor(Color.TRANSPARENT);
+            cv = bitmapCanvas;
+            super.draw(cv);
+        } else {
+            super.draw(cv = c);
+        }
 
         if (topProgress > 0) {
-            topPaint.setAlpha((int) (topProgress * overlayAlpha * 0xFF));
-            c.drawRect(0, 0, getWidth(), ViewUtils.dp(HEIGHT_DP), topPaint);
+            cv.save();
+            if (bitmapMode) {
+                cv.translate(0, -ViewUtils.dp(HEIGHT_DP) * (1f - topProgress * overlayAlpha));
+            } else {
+                topPaint.setAlpha((int) (topProgress * overlayAlpha * 0xFF));
+            }
+            cv.drawRect(0, 0, getWidth(), ViewUtils.dp(HEIGHT_DP), topPaint);
+            cv.restore();
         }
         if (bottomProgress > 0) {
-            bottomPaint.setAlpha((int) (bottomProgress * overlayAlpha * 0xFF));
-            c.drawRect(0, getHeight() - ViewUtils.dp(HEIGHT_DP), getWidth(), getHeight(), bottomPaint);
+            cv.save();
+            if (bitmapMode) {
+                cv.translate(0, ViewUtils.dp(HEIGHT_DP) * (1f - bottomProgress * overlayAlpha));
+            } else {
+                bottomPaint.setAlpha((int) (bottomProgress * overlayAlpha * 0xFF));
+            }
+            cv.drawRect(0, getHeight() - ViewUtils.dp(HEIGHT_DP), getWidth(), getHeight(), bottomPaint);
+            cv.restore();
+        }
+
+        if (bitmapMode) {
+            c.drawBitmap(bitmap, 0, 0, null);
+            invalidate();
+        }
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        if (bitmap != null) {
+            bitmap.recycle();
+            bitmap = null;
+            bitmapCanvas = null;
         }
     }
 
@@ -80,8 +139,9 @@ public class FadeRecyclerView extends RecyclerView implements IThemeView {
     private void invalidateShaders() {
         if (getWidth() == 0 || getHeight() == 0) return;
 
-        topPaint.setShader(new LinearGradient(getWidth() / 2f, 0, getWidth() / 2f, ViewUtils.dp(HEIGHT_DP), ThemesRepo.getColor(android.R.attr.windowBackground), 0, Shader.TileMode.CLAMP));
-        bottomPaint.setShader(new LinearGradient(getWidth() / 2f, getHeight() - ViewUtils.dp(HEIGHT_DP), getWidth() / 2f, getHeight(), 0, ThemesRepo.getColor(android.R.attr.windowBackground), Shader.TileMode.CLAMP));
+        int clr = bitmapMode ? Color.BLACK : ThemesRepo.getColor(android.R.attr.windowBackground);
+        topPaint.setShader(new LinearGradient(getWidth() / 2f, 0, getWidth() / 2f, ViewUtils.dp(HEIGHT_DP), bitmapMode ? 0 : clr, bitmapMode ? clr : 0, Shader.TileMode.CLAMP));
+        bottomPaint.setShader(new LinearGradient(getWidth() / 2f, getHeight() - ViewUtils.dp(HEIGHT_DP), getWidth() / 2f, getHeight(), bitmapMode ? clr : 0, bitmapMode ? 0 : clr, Shader.TileMode.CLAMP));
         invalidate();
     }
 

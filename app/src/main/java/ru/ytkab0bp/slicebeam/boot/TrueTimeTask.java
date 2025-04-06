@@ -10,6 +10,7 @@ import java.net.InetAddress;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import kotlinx.coroutines.Dispatchers;
 import ru.ytkab0bp.slicebeam.SliceBeam;
@@ -65,7 +66,7 @@ public class TrueTimeTask extends BootTask {
             });
             SliceBeam.TRUE_TIME.sync();
             try {
-                latch.await();
+                latch.await(300, TimeUnit.MILLISECONDS);
             } catch (InterruptedException ignored) {}
         });
         onWorker();

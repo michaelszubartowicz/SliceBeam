@@ -25,8 +25,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import ru.ytkab0bp.slicebeam.R;
+import ru.ytkab0bp.slicebeam.SliceBeam;
 import ru.ytkab0bp.slicebeam.cloud.CloudAPI;
 import ru.ytkab0bp.slicebeam.cloud.CloudController;
+import ru.ytkab0bp.slicebeam.events.NeedDismissSnackbarEvent;
 import ru.ytkab0bp.slicebeam.recycler.PreferenceSwitchItem;
 import ru.ytkab0bp.slicebeam.recycler.SimpleRecyclerAdapter;
 import ru.ytkab0bp.slicebeam.recycler.SimpleRecyclerItem;
@@ -94,6 +96,8 @@ public class CloudManageBottomSheet extends BottomSheetDialog {
                             Prefs.setCloudProfileSyncEnabled(isChecked);
                             if (isChecked) {
                                 CloudController.notifyDataChanged();
+                            } else {
+                                SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(CloudController.CLOUD_SYNC_TAG));
                             }
                         }));
             }
@@ -105,8 +109,8 @@ public class CloudManageBottomSheet extends BottomSheetDialog {
                 adapter.setItems(items);
                 recyclerView.setAdapter(adapter);
                 ll.addView(recyclerView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT) {{
-                    topMargin = ViewUtils.dp(12);
-                    leftMargin = rightMargin = ViewUtils.dp(12);
+                    topMargin = ViewUtils.dp(16);
+                    leftMargin = rightMargin = ViewUtils.dp(16);
                 }});
             }
 

@@ -144,6 +144,11 @@ public class BedFragment extends Fragment {
         if (e.tag != null) {
             s.tag(e.tag);
         }
+        if (e.buttonTitle != null) {
+            s.lifetime = 0;
+            s.buttonTitle = e.buttonTitle;
+            s.buttonClick = e.buttonClick;
+        }
         snackbarsLayout.show(s);
     }
 

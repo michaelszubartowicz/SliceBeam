@@ -16,6 +16,7 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.Space;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -104,6 +105,8 @@ public class SnackbarsLayout extends FrameLayout {
         private TextView title;
         private Snackbar snackbar;
 
+        private TextView button;
+
         private float progress;
 
         private GestureDetector gestureDetector;
@@ -143,6 +146,16 @@ public class SnackbarsLayout extends FrameLayout {
             title.setEllipsize(TextUtils.TruncateAt.END);
             addView(title);
 
+            addView(new Space(context), new LinearLayout.LayoutParams(0, 0, 1f));
+
+            button = new TextView(context);
+            button.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            button.setTypeface(ViewUtils.getTypeface(ViewUtils.ROBOTO_MEDIUM));
+            button.setMaxLines(1);
+            button.setEllipsize(TextUtils.TruncateAt.END);
+            button.setPadding(ViewUtils.dp(8), ViewUtils.dp(8), ViewUtils.dp(8),ViewUtils.dp(8));
+            addView(button);
+
             setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT) {{
                 leftMargin = topMargin = rightMargin = bottomMargin = ViewUtils.dp(MARGIN_DP);
             }});
@@ -164,7 +177,7 @@ public class SnackbarsLayout extends FrameLayout {
 
                 @Override
                 public boolean onFling(@Nullable MotionEvent e1, @NonNull MotionEvent e2, float velocityX, float velocityY) {
-                    if (snackbar.type == Type.LOADING) {
+                    if (snackbar.lifetime == 0) {
                         return false;
                     }
 
@@ -247,34 +260,48 @@ public class SnackbarsLayout extends FrameLayout {
             icon.setVisibility(snackbar.type == Type.LOADING ? GONE : VISIBLE);
 
             title.setText(snackbar.title);
+            button.setText(snackbar.buttonTitle);
+            button.setOnClickListener(snackbar.buttonClick);
+            button.setVisibility(snackbar.buttonTitle != null ? View.VISIBLE : View.GONE);
+
             switch (snackbar.type) {
                 case DONE:
                     icon.setImageResource(R.drawable.done_outline_28);
                     icon.setImageTintList(ColorStateList.valueOf(ThemesRepo.getColor(R.attr.snackbarDone)));
                     title.setTextColor(ThemesRepo.getColor(R.attr.snackbarDone));
+                    button.setTextColor(ThemesRepo.getColor(R.attr.snackbarDone));
+                    button.setBackground(ViewUtils.createRipple(ThemesRepo.getColor(android.R.attr.colorControlHighlight), ColorUtils.setAlphaComponent(ThemesRepo.getColor(R.attr.snackbarDone), 0x21), 8));
                     setBackgroundColor(ColorUtils.blendARGB(ThemesRepo.getColor(R.attr.snackbarBase), ThemesRepo.getColor(R.attr.snackbarDone), 0.15f));
                     break;
                 case WARNING:
                     icon.setImageResource(R.drawable.warning_triangle_outline_28);
                     icon.setImageTintList(ColorStateList.valueOf(ThemesRepo.getColor(R.attr.snackbarWarning)));
                     title.setTextColor(ThemesRepo.getColor(R.attr.snackbarWarning));
+                    button.setTextColor(ThemesRepo.getColor(R.attr.snackbarWarning));
+                    button.setBackground(ViewUtils.createRipple(ThemesRepo.getColor(android.R.attr.colorControlHighlight), ColorUtils.setAlphaComponent(ThemesRepo.getColor(R.attr.snackbarWarning), 0x21), 8));
                     setBackgroundColor(ColorUtils.blendARGB(ThemesRepo.getColor(R.attr.snackbarBase), ThemesRepo.getColor(R.attr.snackbarWarning), 0.15f));
                     break;
                 case LOADING:
                     progressBar.setIndeterminateTintList(ColorStateList.valueOf(ThemesRepo.getColor(R.attr.snackbarInfo)));
                     title.setTextColor(ThemesRepo.getColor(R.attr.snackbarInfo));
+                    button.setTextColor(ThemesRepo.getColor(R.attr.snackbarInfo));
+                    button.setBackground(ViewUtils.createRipple(ThemesRepo.getColor(android.R.attr.colorControlHighlight), ColorUtils.setAlphaComponent(ThemesRepo.getColor(R.attr.snackbarInfo), 0x21), 8));
                     setBackgroundColor(ColorUtils.blendARGB(ThemesRepo.getColor(R.attr.snackbarBase), ThemesRepo.getColor(R.attr.snackbarInfo), 0.15f));
                     break;
                 case INFO:
                     icon.setImageResource(R.drawable.info_outline_28);
                     icon.setImageTintList(ColorStateList.valueOf(ThemesRepo.getColor(R.attr.snackbarInfo)));
                     title.setTextColor(ThemesRepo.getColor(R.attr.snackbarInfo));
+                    button.setTextColor(ThemesRepo.getColor(R.attr.snackbarInfo));
+                    button.setBackground(ViewUtils.createRipple(ThemesRepo.getColor(android.R.attr.colorControlHighlight), ColorUtils.setAlphaComponent(ThemesRepo.getColor(R.attr.snackbarInfo), 0x21), 8));
                     setBackgroundColor(ColorUtils.blendARGB(ThemesRepo.getColor(R.attr.snackbarBase), ThemesRepo.getColor(R.attr.snackbarInfo), 0.15f));
                     break;
                 case ERROR:
                     icon.setImageResource(R.drawable.error_outline_28);
                     icon.setImageTintList(ColorStateList.valueOf(ThemesRepo.getColor(R.attr.snackbarError)));
                     title.setTextColor(ThemesRepo.getColor(R.attr.snackbarError));
+                    button.setTextColor(ThemesRepo.getColor(R.attr.snackbarError));
+                    button.setBackground(ViewUtils.createRipple(ThemesRepo.getColor(android.R.attr.colorControlHighlight), ColorUtils.setAlphaComponent(ThemesRepo.getColor(R.attr.snackbarError), 0x10), 8));
                     setBackgroundColor(ColorUtils.blendARGB(ThemesRepo.getColor(R.attr.snackbarBase), ThemesRepo.getColor(R.attr.snackbarError), 0.15f));
                     break;
             }
@@ -287,6 +314,9 @@ public class SnackbarsLayout extends FrameLayout {
         public Type type;
         public int lifetime = 2500;
         public String tag;
+
+        public CharSequence buttonTitle;
+        public View.OnClickListener buttonClick;
 
         public Snackbar(Type type, CharSequence title) {
             this.type = type;
