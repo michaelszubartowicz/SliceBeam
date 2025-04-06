@@ -288,7 +288,7 @@ public class GLView extends GLSurfaceView implements IThemeView {
                 lastY = e.getY();
 
                 int j = renderer.raycastObjectIndex(lastX, lastY);
-                if (j == renderer.getSelectedObject() && j != -1) {
+                if (renderer.getGcodeResult() == null && j == renderer.getSelectedObject() && j != -1) {
                     postDelayed(longClick, 300);
                 }
             }
@@ -399,8 +399,6 @@ public class GLView extends GLSurfaceView implements IThemeView {
                 if (onePointerGesture) {
                     if (!startingGesture) {
                         if (longClickGesture) {
-                            Vec3d move = getRenderer().getCamera().calcScreenMovement(distanceX / touchSlop * 4.5f, distanceY / touchSlop * 4.5f);
-
                             getRenderer().getModel().getTranslation(getRenderer().getSelectedObject(), tempVec);
                             getRenderer().getBed().getRaycaster().raycast(getRenderer(), longClickHitResults, e.getX(), e.getY());
                             if (!longClickHitResults.isEmpty()) {
