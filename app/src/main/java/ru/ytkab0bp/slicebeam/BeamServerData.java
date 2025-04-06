@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Locale;
 
 import cz.msebera.android.httpclient.Header;
+import ru.ytkab0bp.slicebeam.cloud.CloudController;
 import ru.ytkab0bp.slicebeam.events.BeamServerDataUpdatedEvent;
 import ru.ytkab0bp.slicebeam.utils.Prefs;
 
@@ -46,7 +47,7 @@ public class BeamServerData {
     }
 
     public static boolean isCloudAvailable() {
-        return isBoostyAvailable();
+        return isBoostyAvailable() && CloudController.hasAccountFeatures();
     }
 
     public static void load() {

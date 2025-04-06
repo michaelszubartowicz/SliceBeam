@@ -257,6 +257,10 @@ public class CloudController {
         return userFeatures;
     }
 
+    public static boolean hasAccountFeatures() {
+        return userFeatures != null && !userFeatures.levels.isEmpty();
+    }
+
     public static boolean isSyncAvailable() {
         return Prefs.getCloudAPIToken() != null && userInfo != null && userFeatures != null && userInfo.currentLevel >= userFeatures.syncRequiredLevel;
     }
