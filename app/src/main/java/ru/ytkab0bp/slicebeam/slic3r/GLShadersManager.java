@@ -8,7 +8,9 @@ import androidx.annotation.StringDef;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class GLShadersManager {
@@ -52,7 +54,9 @@ public class GLShadersManager {
     @Retention(RetentionPolicy.SOURCE)
     public @interface ShaderType {}
 
-    private final static Map<String, GLShaderProgram> shaders = new HashMap<String, GLShaderProgram>() {
+    private final static List<GLShadersManager> managers = new ArrayList<>();
+
+    private final Map<String, GLShaderProgram> shaders = new HashMap<String, GLShaderProgram>() {
         @Override
         public GLShaderProgram get(@Nullable Object key) {
             GLShaderProgram shader = super.get(key);
@@ -61,24 +65,35 @@ public class GLShadersManager {
         }
     };
 
-    public static void clearShaders() {
+    public GLShadersManager() {
+        managers.add(this);
+    }
+
+    public void clearShaders() {
         for (GLShaderProgram program : shaders.values()) {
             program.release();
         }
         shaders.clear();
+        managers.remove(this);
     }
 
-    public static GLShaderProgram get(@ShaderType String key) {
+    public GLShaderProgram get(@ShaderType String key) {
         return shaders.get(key);
     }
 
     @Keep
     private static long getCurrentShaderPointer() {
-        GLShaderProgram prog = getCurrentShader();
+        GLShaderProgram prog = null;
+        for (GLShadersManager manager : managers) {
+            prog = manager.getCurrentShader();
+            if (prog != null) {
+                break;
+            }
+        }
         return prog != null ? prog.pointer : 0;
     }
 
-    public static GLShaderProgram getCurrentShader() {
+    public GLShaderProgram getCurrentShader() {
         int[] idRef = {0};
         GLES30.glGetIntegerv(GLES30.GL_CURRENT_PROGRAM, idRef, 0);
         int id = idRef[0];

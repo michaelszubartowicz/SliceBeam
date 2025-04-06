@@ -83,7 +83,7 @@ public class Bed3D {
         return triangles.getRaycaster();
     }
 
-    public void render(boolean bottom, double[] viewModelMatrix, double[] projectionMatrix, float invZoom) {
+    public void render(GLShadersManager shadersManager, boolean bottom, double[] viewModelMatrix, double[] projectionMatrix, float invZoom) {
         assertTrue(viewModelMatrix.length == 16);
         assertTrue(projectionMatrix.length == 16);
 
@@ -92,12 +92,12 @@ public class Bed3D {
             DoubleMatrix.translateM(modelMatrix, 0, -getVolumeMin().x * 2, -getVolumeMin().y * 2, -getVolumeMin().z);
         }
         DoubleMatrix.multiplyMM(outModelMatrix, 0, viewModelMatrix, 0, modelMatrix, 0);
-        renderDefaultBed(bottom, outModelMatrix, projectionMatrix);
-        axes.render(viewModelMatrix, projectionMatrix, 0.25f, invZoom);
+        renderDefaultBed(shadersManager, bottom, outModelMatrix, projectionMatrix);
+        axes.render(shadersManager, viewModelMatrix, projectionMatrix, 0.25f, invZoom);
     }
 
-    private void renderDefaultBed(boolean bottom, double[] viewModelMatrix, double[] projectionMatrix) {
-        GLShaderProgram shader = GLShadersManager.get(GLShadersManager.SHADER_FLAT);
+    private void renderDefaultBed(GLShadersManager shadersManager, boolean bottom, double[] viewModelMatrix, double[] projectionMatrix) {
+        GLShaderProgram shader = shadersManager.get(GLShadersManager.SHADER_FLAT);
         shader.startUsing();
 
         shader.setUniformMatrix4fv("view_model_matrix", viewModelMatrix);
@@ -126,8 +126,8 @@ public class Bed3D {
         shader.stopUsing();
     }
 
-    private void renderTexturedBed(boolean bottom, float[] viewModelMatrix, float[] projectionMatrix) {
-        GLShaderProgram shader = GLShadersManager.get(GLShadersManager.SHADER_PRINTBED);
+    private void renderTexturedBed(GLShadersManager shadersManager, boolean bottom, float[] viewModelMatrix, float[] projectionMatrix) {
+        GLShaderProgram shader = shadersManager.get(GLShadersManager.SHADER_PRINTBED);
         shader.startUsing();
 
         shader.setUniform3f("view_model_matrix", viewModelMatrix);

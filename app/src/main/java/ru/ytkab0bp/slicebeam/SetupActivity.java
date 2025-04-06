@@ -143,6 +143,7 @@ public class SetupActivity extends AppCompatActivity {
 
     private GLSurfaceView backgroundView;
     private GLModel backgroundModel;
+    private GLShadersManager shadersManager;
 
     private int titleY;
     private float backgroundProgress;
@@ -396,7 +397,8 @@ public class SetupActivity extends AppCompatActivity {
                 super.surfaceDestroyed(holder);
                 backgroundModel.release();
                 backgroundModel = null;
-                GLShadersManager.clearShaders();
+                shadersManager.clearShaders();
+                shadersManager = null;
             }
         };
         backgroundView.setEGLContextClientVersion(3);
@@ -410,6 +412,7 @@ public class SetupActivity extends AppCompatActivity {
                 if (backgroundModel == null) {
                     backgroundModel = new GLModel();
                     backgroundModel.initBackgroundTriangles();
+                    shadersManager = new GLShadersManager();
                 }
             }
 
@@ -426,7 +429,7 @@ public class SetupActivity extends AppCompatActivity {
 
                 if (backgroundModel != null) {
                     glDisable(GL_DEPTH_TEST);
-                    GLShaderProgram shader = GLShadersManager.get(GLShadersManager.SHADER_BEAM_INTRO);
+                    GLShaderProgram shader = shadersManager.get(GLShadersManager.SHADER_BEAM_INTRO);
                     shader.startUsing();
                     int topColor = ThemesRepo.getColor(android.R.attr.colorAccent);
                     int bottomColor = ThemesRepo.getColor(android.R.attr.windowBackground);

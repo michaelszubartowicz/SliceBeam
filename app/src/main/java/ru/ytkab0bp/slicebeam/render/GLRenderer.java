@@ -52,6 +52,7 @@ public class GLRenderer implements GLSurfaceView.Renderer {
     // Instance values, should be released
     private Bed3D bed;
     private int lastConfigUid;
+    private GLShadersManager shadersManager;
     private GLModel backgroundModel;
     private GLModel selectionModel;
     private List<GLModel> glModels = new ArrayList<>();
@@ -212,7 +213,7 @@ public class GLRenderer implements GLSurfaceView.Renderer {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glDisable(GL_DEPTH_TEST);
-        GLShaderProgram shader = GLShadersManager.get(GLShadersManager.SHADER_BACKGROUND);
+        GLShaderProgram shader = shadersManager.get(GLShadersManager.SHADER_BACKGROUND);
         shader.startUsing();
         shader.setUniformColor("top_color", ThemesRepo.getColor(R.attr.backgroundColorTop));
         shader.setUniformColor("bottom_color", ThemesRepo.getColor(R.attr.backgroundColorBottom));
@@ -225,7 +226,7 @@ public class GLRenderer implements GLSurfaceView.Renderer {
             configureBed();
         }
         if (bed.isValid()) {
-            bed.render(bottom, camera.getViewModelMatrix(), projectionMatrix, 1f / camera.getZoom());
+            bed.render(shadersManager, bottom, camera.getViewModelMatrix(), projectionMatrix, 1f / camera.getZoom());
         }
 
         if (isViewerEnabled) {
@@ -239,7 +240,7 @@ public class GLRenderer implements GLSurfaceView.Renderer {
             viewer.render(camera.getViewModelMatrix(), projectionMatrix);
         }
         if (viewer == null && model != null) {
-            shader = GLShadersManager.get(GLShadersManager.SHADER_GOURAUD_LIGHT);
+            shader = shadersManager.get(GLShadersManager.SHADER_GOURAUD_LIGHT);
             shader.startUsing();
             int color = ThemesRepo.getColor(android.R.attr.colorAccent);
             int hoverColor = ThemesRepo.getColor(R.attr.modelHoverColor);
@@ -301,7 +302,7 @@ public class GLRenderer implements GLSurfaceView.Renderer {
                 if (selected) {
                     shader.stopUsing();
 
-                    GLShaderProgram flat = GLShadersManager.get(GLShadersManager.SHADER_FLAT);
+                    GLShaderProgram flat = shadersManager.get(GLShadersManager.SHADER_FLAT);
                     glLineWidth(ViewUtils.dp(1.5f));
 
                     flat.startUsing();
@@ -323,7 +324,7 @@ public class GLRenderer implements GLSurfaceView.Renderer {
                 if (isInFlattenMode) {
                     shader.stopUsing();
 
-                    GLShaderProgram flat = GLShadersManager.get(GLShadersManager.SHADER_FLAT);
+                    GLShaderProgram flat = shadersManager.get(GLShadersManager.SHADER_FLAT);
 
                     flat.startUsing();
                     glEnable(GL_BLEND);
@@ -603,6 +604,7 @@ public class GLRenderer implements GLSurfaceView.Renderer {
 
         backgroundModel = new GLModel();
         backgroundModel.initBackgroundTriangles();
+        shadersManager = new GLShadersManager();
         if (!bed.isValid()) return;
 
         if (cameraIsDirty) {
@@ -625,7 +627,10 @@ public class GLRenderer implements GLSurfaceView.Renderer {
     }
 
     public void onDestroy() {
-        GLShadersManager.clearShaders();
+        if (shadersManager != null) {
+            shadersManager.clearShaders();
+            shadersManager = null;
+        }
         if (backgroundModel != null) {
             backgroundModel.release();
             backgroundModel = null;

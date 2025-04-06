@@ -39,13 +39,13 @@ public class CoordAxes {
         arrow.render();
     }
 
-    public void render(double[] viewMatrix, double[] projectionMatrix, float emissionFactor, float invZoom) {
+    public void render(GLShadersManager shadersManager, double[] viewMatrix, double[] projectionMatrix, float emissionFactor, float invZoom) {
         if (!arrow.isInitialized()) {
             arrow.stilizedArrow(tipRadius, tipLength, stemRadius, stemLength);
         }
 
-        GLShaderProgram currentShader = GLShadersManager.getCurrentShader();
-        GLShaderProgram shader = GLShadersManager.get(GLShadersManager.SHADER_GOURAUD_LIGHT);
+        GLShaderProgram currentShader = shadersManager.getCurrentShader();
+        GLShaderProgram shader = shadersManager.get(GLShadersManager.SHADER_GOURAUD_LIGHT);
         if (currentShader != null) {
             currentShader.stopUsing();
         }
