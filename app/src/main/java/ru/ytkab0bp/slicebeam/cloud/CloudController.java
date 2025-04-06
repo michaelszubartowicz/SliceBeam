@@ -329,7 +329,15 @@ public class CloudController {
         CloudAPI.INSTANCE.syncGetState(new APICallback<CloudAPI.SyncState>() {
             @Override
             public void onResponse(CloudAPI.SyncState response) {
-                if (response.usedSize == 0) {
+                if (SliceBeam.CONFIG == null && response.usedSize != 0) {
+                    // Setup screen, no config yet
+                    downloadData(response.lastUpdatedDate);
+                } else if (response.usedSize == 0) {
+                    if (SliceBeam.CONFIG == null) {
+                        SliceBeam.EVENT_BUS.fireEvent(new NeedDismissSnackbarEvent(CLOUD_SYNC_TAG));
+                        return;
+                    }
+
                     // No data on server yet, send anyway
                     uploadData(modified);
                 } else if (response.lastUpdatedDate != Prefs.getCloudRemoteLastModified()) {

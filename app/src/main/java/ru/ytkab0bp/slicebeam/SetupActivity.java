@@ -95,6 +95,7 @@ import ru.ytkab0bp.slicebeam.components.BeamAlertDialogBuilder;
 import ru.ytkab0bp.slicebeam.components.CloudManageBottomSheet;
 import ru.ytkab0bp.slicebeam.config.ConfigObject;
 import ru.ytkab0bp.slicebeam.events.BeamServerDataUpdatedEvent;
+import ru.ytkab0bp.slicebeam.events.CloudFeaturesUpdatedEvent;
 import ru.ytkab0bp.slicebeam.events.CloudLoginStateUpdatedEvent;
 import ru.ytkab0bp.slicebeam.recycler.BigHeaderItem;
 import ru.ytkab0bp.slicebeam.recycler.PreferenceItem;
@@ -121,6 +122,7 @@ public class SetupActivity extends AppCompatActivity {
     public final static String EXTRA_ABOUT = "about";
     public final static String EXTRA_BOOSTY_ONLY = "boosty_only";
     public final static String EXTRA_CLOUD_PROFILE = "cloud_profile";
+    public final static String EXTRA_CLOUD_IMPORT_FROM_SETUP = "cloud_import_from_setup";
 
     private final static String TAG = "SetupActivity";
 
@@ -164,6 +166,7 @@ public class SetupActivity extends AppCompatActivity {
     private boolean about;
     private boolean boostyOnly;
     private boolean cloudProfile;
+    private boolean cloudImport;
 
     private List<ConfigObject> enabledPrinters = new ArrayList<>();
 
@@ -182,6 +185,7 @@ public class SetupActivity extends AppCompatActivity {
         about = getIntent().getBooleanExtra(EXTRA_ABOUT, false);
         boostyOnly = getIntent().getBooleanExtra(EXTRA_BOOSTY_ONLY, false);
         cloudProfile = getIntent().getBooleanExtra(EXTRA_CLOUD_PROFILE, false);
+        cloudImport = getIntent().getBooleanExtra(EXTRA_CLOUD_IMPORT_FROM_SETUP, false);
 
         if (!about && !boostyOnly && !cloudProfile) {
             new BeamAlertDialogBuilder(this)
@@ -508,6 +512,21 @@ public class SetupActivity extends AppCompatActivity {
         if (cloudProfile) {
             cloudItem.bindLoginButton(true);
             cloudItem.bindFeatures();
+
+            if (Prefs.getCloudAPIToken() != null && cloudImport) {
+                finish();
+            }
+        } else if (!about && !boostyOnly) {
+            if (Prefs.getCloudAPIToken() != null) {
+                pager.setCurrentItem(pager.getAdapter().getItemCount() - 1);
+            }
+        }
+    }
+
+    @EventHandler(runOnMainThread = true)
+    public void onCloudFeaturesUpdated(CloudFeaturesUpdatedEvent e) {
+        if (!about && !boostyOnly && !cloudProfile) {
+            reposItem.onCloudInfoUpdated();
         }
     }
 
@@ -1104,6 +1123,8 @@ public class SetupActivity extends AppCompatActivity {
         private ProgressBar progressBar;
         private FrameLayout loadedLayout;
         private SimpleRecyclerAdapter adapter;
+        private TextView cloudImportView;
+        private TextView cloudOrView;
         private TextView customProfileView;
         private TextView buttonView;
 
@@ -1120,10 +1141,29 @@ public class SetupActivity extends AppCompatActivity {
 
             LinearLayout ll = new LinearLayout(ctx);
             ll.setOrientation(LinearLayout.VERTICAL);
+            cloudImportView = new TextView(ctx);
+            cloudImportView.setVisibility(View.GONE);
+            cloudImportView.setText(R.string.IntroImportFromCloud);
+            cloudImportView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+            cloudImportView.setGravity(Gravity.CENTER);
+            cloudImportView.setPadding(ViewUtils.dp(12), ViewUtils.dp(8), ViewUtils.dp(12), ViewUtils.dp(8));
+            cloudImportView.setOnClickListener(v -> startActivity(new Intent(v.getContext(), SetupActivity.class).putExtra(SetupActivity.EXTRA_CLOUD_PROFILE, true).putExtra(SetupActivity.EXTRA_CLOUD_IMPORT_FROM_SETUP, true)));
+            ll.addView(cloudImportView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(48)) {{
+                leftMargin = rightMargin = ViewUtils.dp(16);
+            }});
+
+            cloudOrView = new TextView(ctx);
+            cloudOrView.setVisibility(View.GONE);
+            cloudOrView.setText(R.string.IntroImportOr);
+            cloudOrView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            cloudOrView.setGravity(Gravity.CENTER);
+            ll.addView(cloudOrView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT) {{
+                leftMargin = rightMargin = ViewUtils.dp(16);
+            }});
+
             customProfileView = new TextView(ctx);
             customProfileView.setText(R.string.IntroCustomProfile);
             customProfileView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-            customProfileView.setTextColor(ThemesRepo.getColor(android.R.attr.colorAccent));
             customProfileView.setGravity(Gravity.CENTER);
             customProfileView.setPadding(ViewUtils.dp(12), ViewUtils.dp(8), ViewUtils.dp(12), ViewUtils.dp(8));
             customProfileView.setOnClickListener(v -> {
@@ -1132,8 +1172,9 @@ public class SetupActivity extends AppCompatActivity {
                 SetupActivity.this.adapter.notifyItemRangeInserted(REPOS_INDEX + 1, SetupActivity.this.adapter.getItemCount() - REPOS_INDEX - 1);
                 scrollToNext();
             });
-            ll.addView(customProfileView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT) {{
-                bottomMargin = ViewUtils.dp(12);
+            ll.addView(customProfileView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewUtils.dp(48)) {{
+                leftMargin = rightMargin = ViewUtils.dp(16);
+                bottomMargin = ViewUtils.dp(6);
             }});
 
             buttonView = new TextView(ctx);
@@ -1180,7 +1221,13 @@ public class SetupActivity extends AppCompatActivity {
         @Override
         public void onBindView(View view) {
             progressBar.setIndeterminateTintList(ColorStateList.valueOf(ThemesRepo.getColor(android.R.attr.colorAccent)));
+            cloudImportView.setTextColor(ThemesRepo.getColor(android.R.attr.colorAccent));
+            cloudImportView.setBackground(ViewUtils.createRipple(ThemesRepo.getColor(android.R.attr.colorControlHighlight), 16));
+            cloudImportView.setVisibility(BeamServerData.isCloudAvailable() ? View.VISIBLE : View.GONE);
+            cloudOrView.setTextColor(ThemesRepo.getColor(android.R.attr.textColorSecondary));
+            cloudOrView.setVisibility(BeamServerData.isCloudAvailable() ? View.VISIBLE : View.GONE);
             customProfileView.setTextColor(ThemesRepo.getColor(android.R.attr.colorAccent));
+            customProfileView.setBackground(ViewUtils.createRipple(ThemesRepo.getColor(android.R.attr.colorControlHighlight), 16));
             buttonView.setBackground(ViewUtils.createRipple(ThemesRepo.getColor(android.R.attr.colorControlHighlight), ThemesRepo.getColor(android.R.attr.colorAccent), 16));
 
             if (adapter.getItemCount() == 0 && isReposLoaded) {
@@ -1201,6 +1248,10 @@ public class SetupActivity extends AppCompatActivity {
                 progressBar.setScaleY(1f);
                 loadedLayout.setAlpha(0f);
             }
+        }
+
+        public void onCloudInfoUpdated() {
+            cloudImportView.setVisibility(BeamServerData.isCloudAvailable() ? View.VISIBLE : View.GONE);
         }
 
         public void onReposLoaded() {

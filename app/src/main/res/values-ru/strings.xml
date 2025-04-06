@@ -129,6 +129,8 @@
     <string name="IntroLetStartWithColor">Давайте начнём с вашего любимого цвета.</string>
     <string name="IntroFailedToLoadRepos">Не удалось загрузить репозитории!</string>
     <string name="IntroSelectRepos">Выберите репозитории для загрузки профилей.</string>
+    <string name="IntroImportFromCloud">Импортировать из облака Beam</string>
+    <string name="IntroImportOr">Или</string>
     <string name="IntroCustomProfile">Использовать пользовательский профиль</string>
     <string name="IntroCustomProfileHeader">Пользовательские</string>
     <string name="IntroCustomProfileName">Пользовательский профиль</string>

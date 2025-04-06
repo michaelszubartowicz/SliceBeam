@@ -131,6 +131,8 @@
     <string name="IntroLetStartWithColor">Let\'s start with your favorite color.</string>
     <string name="IntroFailedToLoadRepos">Failed to load repositories from network!</string>
     <string name="IntroSelectRepos">Select repositories to fetch profiles.</string>
+    <string name="IntroImportFromCloud">Import from Beam Cloud</string>
+    <string name="IntroImportOr">Or</string>
     <string name="IntroCustomProfile">Use custom profile</string>
     <string name="IntroCustomProfileHeader">Custom</string>
     <string name="IntroCustomProfileName">Custom profile</string>
