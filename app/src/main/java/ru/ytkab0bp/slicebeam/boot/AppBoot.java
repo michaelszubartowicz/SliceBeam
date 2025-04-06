@@ -44,7 +44,7 @@ public class AppBoot {
             tryRunTask(task, true, false);
         }
         try {
-            while (!latch.await(50, TimeUnit.MILLISECONDS)) {
+            while (!latch.await(10, TimeUnit.MILLISECONDS)) {
                 if (!pendingMain.isEmpty()) {
                     List<Runnable> clone = new ArrayList<>(pendingMain);
                     for (Runnable r : clone) {
