@@ -259,7 +259,7 @@ public class CloudController {
     }
 
     public static boolean hasAccountFeatures() {
-        return userFeatures != null && !userFeatures.levels.isEmpty();
+        return userFeatures != null && userFeatures.levels != null && !userFeatures.levels.isEmpty();
     }
 
     public static boolean isSyncAvailable() {
