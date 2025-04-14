@@ -11,6 +11,7 @@ It is based on PrusaSlicer's core and well optimized for Android touchscreen int
 
 # Quick Start
 [<img src="/.github/img/getongp.svg">](https://play.google.com/store/apps/details?id=ru.ytkab0bp.slicebeam)
+
 Or download APK from [Releases tab](https://github.com/utkabobr/SliceBeam/releases/latest) and follow setup instructions.
 
 # Where to get printer profiles?
